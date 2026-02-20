@@ -595,10 +595,19 @@ async function connectDiscordRPC() {
 
 // Register protocol and initialize RPC when app is ready
 app.whenReady().then(() => {
-    // Check for updates on startup
+    // Check for updates on startup and periodically
     if (CONFIG.AUTO_UPDATE.ENABLED && process.env.NODE_ENV !== 'development') {
-        console.log('Checking for updates...');
-        autoUpdater.checkForUpdatesAndNotify().catch(e => console.error('Failed to check for updates:', e));
+        const checkUpdates = () => {
+             console.log('Checking for updates...');
+             autoUpdater.checkForUpdatesAndNotify().catch(e => console.error('Failed to check for updates:', e));
+        };
+
+        // Initial check
+        checkUpdates();
+
+        // Periodic check (default: every hour)
+        const interval = CONFIG.AUTO_UPDATE.CHECK_INTERVAL || 3600000;
+        setInterval(checkUpdates, interval);
     }
 
     // We intentionally SKIP DiscordRPC.register() here as it can be buggy in dev
