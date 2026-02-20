@@ -53,6 +53,21 @@ autoUpdater.on('download-progress', (progressObj) => {
 
 autoUpdater.on('update-downloaded', (info) => {
   sendStatusToWindow('Update downloaded', info);
+  
+  // Ask user to install now or later
+  dialog.showMessageBox({
+    type: 'info',
+    title: 'Update Ready',
+    message: 'A new version of Songify is ready to install.',
+    detail: 'Do you want to install it now? If you choose "Later", it will be installed when you exit the app.',
+    buttons: ['Install Now', 'Later'],
+    defaultId: 0,
+    cancelId: 1
+  }).then((result) => {
+    if (result.response === 0) {
+      autoUpdater.quitAndInstall();
+    }
+  });
 });
 
 // IPC Handlers for Auto Update

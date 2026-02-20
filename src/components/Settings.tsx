@@ -280,7 +280,7 @@ export function Settings({ onBack, currentTheme, onThemeChange }: SettingsProps)
                         </div>
                         
                         <div className="p-6 space-y-4">
-                                 <div className="flex justify-between items-center p-3 rounded-lg hover:bg-[var(--bg-secondary)] transition-colors cursor-pointer group" onClick={() => platform.openExternal('https://github.com/jozef-gaming/songify')}>
+                                 <div className="flex justify-between items-center p-3 rounded-lg hover:bg-[var(--bg-secondary)] transition-colors cursor-pointer group" onClick={() => platform.openExternal('https://github.com/jozefbosi9821/Songify')}>
                                     <div className="flex items-center gap-3">
                                     <Github className="text-[var(--text-secondary)] group-hover:text-[var(--text-main)] transition-colors" />
                                     <span className="text-[var(--text-main)] font-medium">{t.githubRepo}</span>
