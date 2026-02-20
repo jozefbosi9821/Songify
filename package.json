@@ -1,0 +1,82 @@
+{
+  "name": "songify",
+  "private": true,
+  "version": "1.0.0",
+  "description": "A Spotify-like music player built with Electron, React, and Tailwind CSS",
+  "author": "Jozef Gaming",
+  "type": "module",
+  "main": "dist-electron/electron/main.js",
+  "scripts": {
+    "dev": "concurrently \"vite\" \"npm run electron:build && wait-on tcp:5173 && npm run dev:electron\"",
+    "dev:electron": "cross-env NODE_ENV=development electron .",
+    "electron:build": "tsc -p electron/tsconfig.json && node -e \"require('fs').writeFileSync('dist-electron/package.json', '{\\\"type\\\": \\\"commonjs\\\"}')\"",
+    "build": "tsc -b && vite build && npm run electron:build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "pack": "npm run build && electron-builder --dir",
+    "dist": "npm run build && electron-builder"
+  },
+  "build": {
+    "appId": "com.jozefgaming.songify",
+    "productName": "Songify",
+    "icon": "src/assets/Songify.png",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      "bin/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "jozefbosi9821",
+        "repo": "Songify"
+      }
+    ]
+  },
+  "dependencies": {
+    "discord-rpc": "^4.0.1",
+    "electron-log": "^5.4.3",
+    "electron-squirrel-startup": "^1.0.1",
+    "electron-updater": "^6.8.3",
+    "hls.js": "^1.6.15",
+    "lucide-react": "^0.574.0",
+    "mime-types": "^3.0.2",
+    "music-metadata": "^7.14.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@tailwindcss/postcss": "^4.1.18",
+    "@types/discord-rpc": "^4.0.10",
+    "@types/mime-types": "^3.0.1",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.1",
+    "autoprefixer": "^10.4.24",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^40.4.1",
+    "electron-builder": "^24.13.3",
+    "eslint": "^9.39.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.5.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.18",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.48.0",
+    "vite": "^7.3.1",
+    "wait-on": "^9.0.4"
+  }
+}

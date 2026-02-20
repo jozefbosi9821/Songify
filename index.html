@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/src/assets/Songify.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Songify</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      window.onerror = function(message, source, lineno, colno, error) {
+        // Only alert if it's a critical error preventing startup
+        if (!document.getElementById('root').hasChildNodes()) {
+          alert('Global Error: ' + message + '\nSource: ' + source + ':' + lineno);
+        }
+        console.error('Global Error:', message, source, lineno, colno, error);
+      };
+      
+      window.addEventListener('unhandledrejection', function(event) {
+        if (!document.getElementById('root').hasChildNodes()) {
+          alert('Unhandled Promise Rejection: ' + event.reason);
+        }
+        console.error('Unhandled Promise Rejection:', event.reason);
+      });
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
