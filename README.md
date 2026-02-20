@@ -1,4 +1,4 @@
 # Songify
 
-A Spotify-like music player built with Electron, React, and Tailwind CSS.
+A Music player built with Electron, React, and Tailwind CSS.
 

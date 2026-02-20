@@ -1,9 +1,9 @@
 {
   "name": "songify",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A music player built with Electron, React, and Tailwind CSS",
-  "author": "jozefbosi9821",
+  "author": "Jozef Gaming",
   "type": "module",
   "main": "dist-electron/electron/main.js",
   "scripts": {

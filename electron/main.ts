@@ -16,7 +16,7 @@ log.transports.file.level = 'info';
 autoUpdater.logger = log;
 
 // Auto Updater Configuration
-autoUpdater.autoDownload = false;
+autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
 
 const sendStatusToWindow = (text: string, data?: any) => {

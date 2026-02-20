@@ -40,12 +40,32 @@ function AppContent() {
     return saved ? parseFloat(saved) : 0.5;
   });
   const [showLyrics, setShowLyrics] = useState(false);
-  const [isShuffled, setIsShuffled] = useState(false);
+  const [isShuffled, setIsShuffled] = useState(() => {
+    return localStorage.getItem('songify_shuffle') === 'true';
+  });
   const [shuffleOrder, setShuffleOrder] = useState<number[] | null>(null);
-  const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
+  const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>(() => {
+    const saved = localStorage.getItem('songify_repeat');
+    return (saved as 'off' | 'all' | 'one') || 'off';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('songify_shuffle', isShuffled.toString());
+  }, [isShuffled]);
+
+  useEffect(() => {
+    localStorage.setItem('songify_repeat', repeatMode);
+  }, [repeatMode]);
   const [showQueue, setShowQueue] = useState(false);
   const [queue, setQueue] = useState<string[]>([]);
-  const [theme, setTheme] = useState('theme-midnight');
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('songify_theme');
+    return saved || 'theme-midnight';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('songify_theme', theme);
+  }, [theme]);
   
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [songToDelete, setSongToDelete] = useState<string | null>(null);
