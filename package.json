@@ -2,8 +2,8 @@
   "name": "songify",
   "private": true,
   "version": "1.0.0",
-  "description": "A Spotify-like music player built with Electron, React, and Tailwind CSS",
-  "author": "Jozef Gaming",
+  "description": "A music player built with Electron, React, and Tailwind CSS",
+  "author": "jozefbosi9821",
   "type": "module",
   "main": "dist-electron/electron/main.js",
   "scripts": {
