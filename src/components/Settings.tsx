@@ -1,4 +1,4 @@
-import { Trash2, ArrowLeft, Palette, Info, Database, FolderOpen, Github, Monitor, Keyboard, ExternalLink } from 'lucide-react';
+import { Trash2, ArrowLeft, Palette, Info, Database, FolderOpen, Github, Monitor, Keyboard, ExternalLink, User, Cloud } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import songifyLogo from '../assets/Songify.png';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -8,6 +8,9 @@ interface SettingsProps {
     onBack: () => void;
     currentTheme: string;
     onThemeChange: (theme: string) => void;
+    username: string | null;
+    onLogin: () => void;
+    onLogout: () => void;
 }
 
 const LANGUAGES: { id: Language, name: string, flag: string }[] = [
@@ -21,7 +24,7 @@ const LANGUAGES: { id: Language, name: string, flag: string }[] = [
 
 import { platform } from '../services/platform';
 
-export function Settings({ onBack, currentTheme, onThemeChange }: SettingsProps) {
+export function Settings({ onBack, currentTheme, onThemeChange, username, onLogin, onLogout }: SettingsProps) {
     const { language, setLanguage, t } = useLanguage();
 
     const themes = [
@@ -93,6 +96,49 @@ export function Settings({ onBack, currentTheme, onThemeChange }: SettingsProps)
 
             <div className="p-8 max-w-4xl mx-auto space-y-12 pb-20">
                 
+                {/* Account Section */}
+                <div className="bg-[var(--bg-tertiary)]/30 p-6 rounded-2xl border border-[var(--border)]">
+                    <div className="flex items-center gap-3 mb-6">
+                        <User className="text-[var(--accent)]" size={24} />
+                        <h2 className="text-xl font-bold text-[var(--text-main)]">Account</h2>
+                    </div>
+                    
+                    <div className="flex flex-col gap-4">
+                        <div className="flex items-center justify-between p-4 bg-[var(--bg-tertiary)] rounded-xl border border-[var(--border)]">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-full bg-[var(--accent)]/20 flex items-center justify-center text-[var(--accent)]">
+                                    <User size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="font-medium text-[var(--text-main)]">
+                                        {username ? username : 'Guest User'}
+                                    </h3>
+                                    <p className="text-sm text-[var(--text-secondary)]">
+                                        {username ? 'Synced & Backup enabled' : 'Sign in to sync your library'}
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            {username ? (
+                                <button 
+                                    onClick={onLogout}
+                                    className="px-4 py-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors text-sm font-medium"
+                                >
+                                    Sign Out
+                                </button>
+                            ) : (
+                                <button 
+                                    onClick={onLogin}
+                                    className="px-4 py-2 bg-[var(--accent)] text-white hover:opacity-90 rounded-lg transition-colors text-sm font-medium flex items-center gap-2"
+                                >
+                                    <Cloud size={16} />
+                                    Sign In / Register
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
                 {/* Appearance Section */}
                 <div>
                     <div className="flex items-center gap-3 mb-6">

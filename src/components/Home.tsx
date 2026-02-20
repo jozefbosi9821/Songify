@@ -1,5 +1,7 @@
-import { Play, Music, ListMusic, Search, Zap } from 'lucide-react';
+import { Play, Music, ListMusic, Search, Zap, BarChart3, Trophy } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { api } from '../services/api';
+import { useEffect, useState } from 'react';
 import type { Song, Playlist } from '../types';
 
 interface HomeProps {
@@ -9,8 +11,28 @@ interface HomeProps {
   onPlaySong: (index: number) => void;
 }
 
+interface UserStats {
+    totalPlays: number;
+    topSongs: { title: string; artist: string; plays: number }[];
+    topArtists: { artist: string; plays: number }[];
+    activity: { date: string; count: number }[];
+}
+
 export function Home({ songs, playlists, onNavigate, onPlaySong }: HomeProps) {
   const { t } = useLanguage();
+  const [stats, setStats] = useState<UserStats | null>(null);
+
+  useEffect(() => {
+      // Fetch stats immediately
+      api.getStats().then(setStats).catch(console.error);
+
+      // Poll for updates every 5 seconds
+      const interval = setInterval(() => {
+          api.getStats().then(setStats).catch(console.error);
+      }, 5000);
+
+      return () => clearInterval(interval);
+  }, []);
 
   // Mock recently played for now, or just random songs
   const recentSongs = songs.slice(0, 4);
@@ -33,6 +55,19 @@ export function Home({ songs, playlists, onNavigate, onPlaySong }: HomeProps) {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+        {/* Your Stats */}
+        {stats && (
+            <div className="bg-gradient-to-br from-emerald-600/20 to-emerald-800/20 border border-emerald-500/30 p-6 rounded-2xl flex items-center gap-4 hover:scale-[1.02] transition-transform">
+                <div className="p-3 bg-emerald-500/20 rounded-xl text-emerald-400">
+                    <BarChart3 size={24} />
+                </div>
+                <div>
+                    <h3 className="font-bold text-lg text-[var(--text-main)]">{stats.totalPlays}</h3>
+                    <p className="text-sm text-[var(--text-secondary)]">Total Plays</p>
+                </div>
+            </div>
+        )}
+
         <div className="bg-gradient-to-br from-blue-600/20 to-blue-800/20 border border-blue-500/30 p-6 rounded-2xl flex items-center gap-4 hover:scale-[1.02] transition-transform cursor-pointer" onClick={() => onNavigate('library')}>
             <div className="p-3 bg-blue-500/20 rounded-xl text-blue-400">
                 <Music size={24} />
@@ -63,6 +98,57 @@ export function Home({ songs, playlists, onNavigate, onPlaySong }: HomeProps) {
             </div>
         </div>
       </div>
+
+      {/* Top Artists & Songs */}
+      {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+              {/* Top Artists */}
+              <div className="bg-[var(--bg-tertiary)]/30 rounded-2xl p-6 border border-[var(--border)]">
+                  <h2 className="text-xl font-bold mb-6 text-[var(--text-main)] flex items-center gap-2">
+                      <Trophy size={20} className="text-yellow-500" />
+                      Your Top Artists
+                  </h2>
+                  <div className="space-y-4">
+                      {stats.topArtists.length > 0 ? stats.topArtists.map((artist, i) => (
+                          <div key={i} className="flex items-center justify-between group">
+                              <div className="flex items-center gap-4">
+                                  <span className="text-2xl font-black text-[var(--text-secondary)]/30 w-8">{i + 1}</span>
+                                  <div>
+                                      <div className="font-bold text-[var(--text-main)]">{artist.artist}</div>
+                                      <div className="text-sm text-[var(--text-secondary)]">{artist.plays} plays</div>
+                                  </div>
+                              </div>
+                          </div>
+                      )) : (
+                          <p className="text-[var(--text-secondary)] italic">Play some music to see your top artists!</p>
+                      )}
+                  </div>
+              </div>
+
+              {/* Top Songs */}
+              <div className="bg-[var(--bg-tertiary)]/30 rounded-2xl p-6 border border-[var(--border)]">
+                  <h2 className="text-xl font-bold mb-6 text-[var(--text-main)] flex items-center gap-2">
+                      <Music size={20} className="text-pink-500" />
+                      Your Top Songs
+                  </h2>
+                  <div className="space-y-4">
+                      {stats.topSongs.length > 0 ? stats.topSongs.map((song, i) => (
+                          <div key={i} className="flex items-center justify-between group">
+                              <div className="flex items-center gap-4">
+                                  <span className="text-2xl font-black text-[var(--text-secondary)]/30 w-8">{i + 1}</span>
+                                  <div>
+                                      <div className="font-bold text-[var(--text-main)] truncate max-w-[200px]">{song.title}</div>
+                                      <div className="text-sm text-[var(--text-secondary)]">{song.artist} • {song.plays} plays</div>
+                                  </div>
+                              </div>
+                          </div>
+                      )) : (
+                          <p className="text-[var(--text-secondary)] italic">Play some music to see your top songs!</p>
+                      )}
+                  </div>
+              </div>
+          </div>
+      )}
 
       {/* Quick Play */}
       <div className="mb-10">

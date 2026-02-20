@@ -12,5 +12,10 @@ export const CONFIG = {
         REPO_OWNER: 'jozefbosi9821',
         REPO_NAME: 'Songify',
         CHECK_INTERVAL: 1000 * 60 * 60, // 1 hour
+    },
+
+    // Backend
+    BACKEND: {
+        URL: 'http://212.227.64.179:12268', // Change this to your VPS IP/Domain
     }
 };

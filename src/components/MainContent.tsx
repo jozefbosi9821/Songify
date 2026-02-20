@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Music, Play, Clock, MoreHorizontal, Edit2, ArrowDownAZ, User, ListPlus, PlayCircle, Disc } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Music, Play, Clock, MoreHorizontal, Edit2, ArrowDownAZ, User, ListPlus, PlayCircle, Disc, Search } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import type { Song, Playlist } from '../types';
@@ -50,7 +50,8 @@ export function MainContent({
   onAddToQueue,
   onGoToArtist,
   onEditPlaylist,
-  onSortPlaylist
+  onSortPlaylist,
+  onReorderPlaylist
 }: MainContentProps) {
   const { t } = useLanguage();
   const [activeMenuSongPath, setActiveMenuSongPath] = useState<string | null>(null);
@@ -58,7 +59,42 @@ export function MainContent({
   const [tempTitle, setTempTitle] = useState(title);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [tempDescription, setTempDescription] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const filteredSongs = songs.filter(song => {
+      if (!searchTerm) return true;
+      const lower = searchTerm.toLowerCase();
+      return (
+          song.title.toLowerCase().includes(lower) ||
+          song.artist.toLowerCase().includes(lower) ||
+          song.album.toLowerCase().includes(lower)
+      );
+  });
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+      if (searchTerm) return; // Disable drag when searching
+      setDraggedIndex(index);
+      e.dataTransfer.effectAllowed = 'move';
+      // Set a ghost image or data if needed, but usually default is fine
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+      if (searchTerm) return;
+      e.preventDefault(); // Necessary to allow dropping
+      e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+      if (searchTerm) return;
+      e.preventDefault();
+      
+      if (draggedIndex !== null && draggedIndex !== dropIndex && currentPlaylistId && onReorderPlaylist) {
+          onReorderPlaylist(currentPlaylistId, draggedIndex, dropIndex);
+      }
+      setDraggedIndex(null);
+  };
 
   useEffect(() => {
     setTempTitle(title);
@@ -205,37 +241,66 @@ export function MainContent({
                         </div>
                     )}
                     
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-4 text-sm font-bold text-[var(--text-secondary)]">
-                            <span className="w-1 h-1 bg-[var(--text-secondary)] rounded-full" />
-                            <span>{songs.length} {t.songs}</span>
+                    <div className="flex flex-col gap-4 w-full mt-2">
+                        <div className="flex items-center justify-between w-full">
+                             <div className="flex items-center gap-4">
+                                <button 
+                                    className="bg-[var(--accent)] text-black rounded-full p-4 hover:scale-105 active:scale-95 transition-transform shadow-lg hover:shadow-[var(--accent)]/50 flex items-center justify-center"
+                                    onClick={() => {
+                                        if (filteredSongs.length > 0 && onPlaySong) {
+                                            const firstSong = filteredSongs[0];
+                                            const originalIndex = songs.findIndex(s => s.path === firstSong.path);
+                                            if (originalIndex !== -1) onPlaySong(originalIndex);
+                                        }
+                                    }}
+                                >
+                                    <Play size={28} fill="currentColor" className="ml-1" />
+                                </button>
+                                
+                                <div className="flex items-center gap-2 text-sm font-bold text-[var(--text-secondary)]">
+                                    <span>{filteredSongs.length} {t.songs}</span>
+                                </div>
+                             </div>
+
+                             <div className="flex items-center gap-3">
+                                <div className="relative group/search">
+                                    <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] group-focus-within/search:text-[var(--accent)] transition-colors" />
+                                    <input 
+                                        type="text"
+                                        placeholder={t.search || "Search in playlist"}
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="bg-[var(--bg-tertiary)]/50 hover:bg-[var(--bg-tertiary)] focus:bg-[var(--bg-tertiary)] border border-transparent focus:border-[var(--accent)] rounded-full py-2 pl-10 pr-4 text-sm text-[var(--text-main)] outline-none transition-all w-48 focus:w-64 placeholder-[var(--text-secondary)]"
+                                    />
+                                </div>
+
+                                {currentPlaylistId && (
+                                    <div className="flex items-center gap-1 bg-[var(--bg-tertiary)]/50 p-1 rounded-lg border border-[var(--border)]">
+                                        <button 
+                                            className="p-1.5 hover:bg-[var(--bg-tertiary)] rounded-md text-[var(--text-secondary)] hover:text-[var(--text-main)] transition-colors"
+                                            onClick={() => onSortPlaylist?.(currentPlaylistId, 'title')}
+                                            title="Sort by Title"
+                                        >
+                                            <ArrowDownAZ size={16} />
+                                        </button>
+                                        <button 
+                                            className="p-1.5 hover:bg-[var(--bg-tertiary)] rounded-md text-[var(--text-secondary)] hover:text-[var(--text-main)] transition-colors"
+                                            onClick={() => onSortPlaylist?.(currentPlaylistId, 'artist')}
+                                            title="Sort by Artist"
+                                        >
+                                            <User size={16} />
+                                        </button>
+                                        <button 
+                                            className="p-1.5 hover:bg-[var(--bg-tertiary)] rounded-md text-[var(--text-secondary)] hover:text-[var(--text-main)] transition-colors"
+                                            onClick={() => onSortPlaylist?.(currentPlaylistId, 'album')}
+                                            title="Sort by Album"
+                                        >
+                                            <Disc size={16} />
+                                        </button>
+                                    </div>
+                                )}
+                             </div>
                         </div>
-                        
-                        {currentPlaylistId && (
-                            <div className="flex items-center gap-2 ml-4">
-                                <button 
-                                    className="p-1.5 hover:bg-[var(--bg-tertiary)] rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-main)] transition-colors"
-                                    onClick={() => onSortPlaylist?.(currentPlaylistId, 'title')}
-                                    title="Sort by Title"
-                                >
-                                    <ArrowDownAZ size={16} />
-                                </button>
-                                <button 
-                                    className="p-1.5 hover:bg-[var(--bg-tertiary)] rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-main)] transition-colors"
-                                    onClick={() => onSortPlaylist?.(currentPlaylistId, 'artist')}
-                                    title="Sort by Artist"
-                                >
-                                    <User size={16} />
-                                </button>
-                                <button 
-                                    className="p-1.5 hover:bg-[var(--bg-tertiary)] rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-main)] transition-colors"
-                                    onClick={() => onSortPlaylist?.(currentPlaylistId, 'album')}
-                                    title="Sort by Album"
-                                >
-                                    <Disc size={16} />
-                                </button>
-                            </div>
-                        )}
                     </div>
                   </div>
               </div>
@@ -251,14 +316,19 @@ export function MainContent({
                     <div className="w-8"></div>
                 </div>
 
-                {songs.map((song, index) => {
-                    const isCurrentSong = currentSongIndex === index;
+                {filteredSongs.map((song, index) => {
+                    const originalIndex = songs.findIndex(s => s.path === song.path);
+                    const isCurrentSong = currentSongIndex === originalIndex;
                     
                     return (
                         <div 
                             key={song.path}
-                            className={`group grid grid-cols-[auto_1fr_1fr_auto_auto] gap-4 px-4 py-3 rounded-xl items-center hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer border border-transparent hover:border-[var(--border)] ${isCurrentSong ? 'bg-[var(--bg-tertiary)] border-[var(--border)] shadow-sm' : ''}`}
-                            onDoubleClick={() => onPlaySong?.(index)}
+                            draggable={!searchTerm && !!currentPlaylistId}
+                            onDragStart={(e) => handleDragStart(e, index)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(e, index)}
+                            className={`group grid grid-cols-[auto_1fr_1fr_auto_auto] gap-4 px-4 py-3 rounded-xl items-center hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer border border-transparent hover:border-[var(--border)] ${isCurrentSong ? 'bg-[var(--bg-tertiary)] border-[var(--border)] shadow-sm' : ''} ${draggedIndex === index ? 'opacity-40 border-dashed border-[var(--accent)]' : ''}`}
+                            onDoubleClick={() => onPlaySong?.(originalIndex)}
                         >
                             <div className="w-8 text-center flex justify-center text-[var(--text-secondary)] font-mono text-sm">
                                 {isCurrentSong && isPlaying ? (
@@ -270,12 +340,12 @@ export function MainContent({
                                 ) : (
                                     <span className="group-hover:hidden">{index + 1}</span>
                                 )}
-                                <Play size={16} className={`hidden group-hover:block ${isCurrentSong ? 'text-[var(--accent)]' : 'text-[var(--text-main)]'}`} onClick={() => onPlaySong?.(index)} />
+                                <Play size={16} className={`hidden group-hover:block ${isCurrentSong ? 'text-[var(--accent)]' : 'text-[var(--text-main)]'}`} onClick={() => onPlaySong?.(originalIndex)} />
                             </div>
                             
                             <div className="flex items-center gap-4 overflow-hidden">
                                 {song.artwork ? (
-                                    <img src={song.artwork} alt="" className="w-10 h-10 rounded-lg object-cover shadow-sm" />
+                                    <img src={song.artwork} alt="" className="w-10 h-10 rounded-lg object-cover shadow-sm select-none" />
                                 ) : (
                                     <div className="w-10 h-10 bg-[var(--bg-tertiary)] rounded-lg flex items-center justify-center shadow-sm">
                                         <Music size={20} className="text-[var(--text-secondary)]" />

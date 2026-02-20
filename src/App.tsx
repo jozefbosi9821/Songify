@@ -13,8 +13,11 @@ import type { Song, Playlist } from './types';
 import { useLanguage, LanguageProvider } from './contexts/LanguageContext';
 import { platform } from './services/platform';
 import { soundcloud } from './services/soundcloud';
+import { User, LogOut, Settings as SettingsIcon } from 'lucide-react';
 
 import { ConfirmationModal } from './components/ConfirmationModal';
+import { AuthModal } from './components/AuthModal';
+import { api } from './services/api';
 
 function App() {
   return (
@@ -69,6 +72,117 @@ function AppContent() {
   
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [songToDelete, setSongToDelete] = useState<string | null>(null);
+
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
+
+  // Check auth on mount
+  useEffect(() => {
+    if (api.isAuthenticated()) {
+      setUsername(api.getUsername());
+      syncFromCloud();
+    }
+  }, []);
+
+  // Auto-sync library when data changes
+  useEffect(() => {
+    if (!username) return;
+
+    const timeoutId = setTimeout(() => {
+        api.syncLibrary({ songs, playlists })
+           .catch(err => console.error("Auto-sync failed:", err));
+    }, 2000); // Debounce for 2 seconds
+
+    return () => clearTimeout(timeoutId);
+  }, [songs, playlists, username]);
+
+  const syncFromCloud = async () => {
+    try {
+      const cloudData = await api.getLibrary();
+      if (cloudData) {
+        if (cloudData.songs && Array.isArray(cloudData.songs)) {
+            setSongs(cloudData.songs);
+        }
+        if (cloudData.playlists && Array.isArray(cloudData.playlists)) {
+            setPlaylists(cloudData.playlists);
+        }
+        
+        // Sync Settings
+        if (cloudData.settings) {
+            if (cloudData.settings.theme) setTheme(cloudData.settings.theme);
+            if (cloudData.settings.volume !== undefined) setVolume(cloudData.settings.volume);
+            if (cloudData.settings.isShuffled !== undefined) setIsShuffled(cloudData.settings.isShuffled);
+            if (cloudData.settings.repeatMode) setRepeatMode(cloudData.settings.repeatMode);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to sync from cloud:', err);
+    }
+  };
+
+  const handleLoginSuccess = (user: string) => {
+    setUsername(user);
+    syncFromCloud();
+  };
+
+  const handleLogout = () => {
+    api.logout();
+    setUsername(null);
+    setSongs([]); // Optional: clear local state on logout? Maybe keep it.
+    setPlaylists([]);
+    // Reload local library from disk
+    platform.loadLibrary().then(data => {
+        if (data) {
+            if (Array.isArray(data)) {
+                setSongs(data);
+            } else {
+                setSongs(data.songs || []);
+                setPlaylists(data.playlists || []);
+            }
+        }
+    });
+  };
+
+  // Sync Logic
+  const latestLibraryState = useRef({ songs, playlists, settings: { theme, volume, isShuffled, repeatMode } });
+  const hasUnsavedChanges = useRef(false);
+
+  // Update refs when state changes
+  useEffect(() => {
+      latestLibraryState.current = {
+          songs,
+          playlists,
+          settings: { theme, volume, isShuffled, repeatMode }
+      };
+      hasUnsavedChanges.current = true;
+  }, [songs, playlists, theme, volume, isShuffled, repeatMode]);
+
+  // Periodic Sync (every 30s)
+  useEffect(() => {
+    if (!username) return;
+
+    // Initial sync check (in case of pending changes from before mount/login)
+    // Actually, better to just start the interval.
+
+    const interval = setInterval(() => {
+        if (hasUnsavedChanges.current) {
+            console.log('[App] Auto-syncing library to cloud...');
+            api.syncLibrary(latestLibraryState.current)
+                .then(() => {
+                    hasUnsavedChanges.current = false;
+                })
+                .catch(err => console.error('[App] Auto-sync failed:', err));
+        }
+    }, 30000); // 30 seconds
+
+    return () => {
+        clearInterval(interval);
+        // Attempt to sync on unmount if changes exist
+        if (hasUnsavedChanges.current) {
+            api.syncLibrary(latestLibraryState.current).catch(console.error);
+        }
+    };
+  }, [username]);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -151,25 +265,40 @@ function AppContent() {
     });
   }, [songs]);
 
+  const currentSong = useMemo(() => {
+    if (currentSongIndex === -1 || !queue[currentSongIndex]) return null;
+    return songs.find(s => s.path === queue[currentSongIndex]) || null;
+  }, [currentSongIndex, queue, songs]);
+
   useEffect(() => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio();
-      audioRef.current.volume = volume;
-    }
-
     const audio = audioRef.current;
+    if (!audio) return;
 
-    const handleTimeUpdate = () => setProgress(audio.currentTime);
-    const handleLoadedMetadata = () => setDuration(audio.duration);
+    const handleTimeUpdate = () => {
+      setProgress(audio.currentTime);
+      setDuration(audio.duration);
+    };
+
+    const handleLoadedMetadata = () => {
+      setDuration(audio.duration);
+    };
+
     const handleEnded = () => {
+      // Log play to backend
+      if (currentSong && username) {
+        api.logPlay({ 
+          id: currentSong.path, // Use path as unique ID for now
+          title: currentSong.title || 'Unknown Title',
+          artist: currentSong.artist || 'Unknown Artist'
+        });
+      }
+
       if (repeatMode === 'one') {
         audio.currentTime = 0;
-        audio.play().catch(console.error);
+        audio.play();
       } else if (repeatMode === 'all') {
         playNext();
       } else {
-        // Repeat Off
-        // Check if it's the last song
         const isLastSong = isShuffled && shuffleOrder 
           ? shuffleOrder.indexOf(currentSongIndex) === shuffleOrder.length - 1
           : currentSongIndex === queue.length - 1;
@@ -192,7 +321,7 @@ function AppContent() {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('ended', handleEnded);
     };
-  }, [currentSongIndex, queue, isShuffled, shuffleOrder, repeatMode]); // Added dependencies for handleEnded closure
+  }, [currentSongIndex, queue, isShuffled, shuffleOrder, repeatMode, currentSong, username]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -200,11 +329,6 @@ function AppContent() {
     }
     localStorage.setItem('songify_volume', volume.toString());
   }, [volume]);
-
-  const currentSong = useMemo(() => {
-    if (currentSongIndex === -1 || !queue[currentSongIndex]) return null;
-    return songs.find(s => s.path === queue[currentSongIndex]) || null;
-  }, [currentSongIndex, queue, songs]);
 
   // Discord RPC Update
   useEffect(() => {
@@ -917,12 +1041,25 @@ function AppContent() {
     return queue.map(path => songs.find(s => s.path === path)).filter((s): s is Song => !!s);
   }, [queue, songs]);
 
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
     <div className={`h-screen flex flex-col overflow-hidden transition-colors duration-300 ${theme}`} style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-main)' }}>
       {/* Custom Title Bar Drag Region */}
       <div className="h-8 w-full fixed top-0 left-0 z-[100] drag-region" />
       
-      <div className="flex-1 flex overflow-hidden p-4 pt-8 gap-4 relative">
+      <div className="flex-1 flex overflow-hidden p-4 gap-4 relative">
         {/* Sidebar */}
         <div className="w-[280px] h-full">
           <Sidebar 
@@ -938,7 +1075,55 @@ function AppContent() {
           />
         </div>
 
-        <div className="flex-1 min-w-0 flex flex-col overflow-hidden h-full">
+        <div className="flex-1 min-w-0 flex flex-col overflow-hidden h-full relative">
+        {/* User Profile Button */}
+        <div className="absolute top-6 right-8 z-[101] flex items-center gap-3 p-1.5 bg-[var(--bg-main)]/30 backdrop-blur-xl rounded-full border border-[var(--border)] shadow-lg transition-all hover:bg-[var(--bg-main)]/50">
+           {/* Settings Button */}
+           <button 
+               onClick={() => handleNavigate('settings')}
+               className="p-2 bg-transparent hover:bg-[var(--bg-tertiary)] rounded-full transition-colors text-[var(--text-secondary)] hover:text-[var(--text-main)]"
+               title={t.settings}
+           >
+               <SettingsIcon size={20} />
+           </button>
+
+           <div className="h-6 w-[1px] bg-[var(--border)]" />
+
+           <div className="relative" ref={userMenuRef}>
+               <button 
+                   onClick={() => username ? setUserMenuOpen(!userMenuOpen) : setAuthModalOpen(true)}
+                   className={`flex items-center gap-3 px-2 rounded-full transition-all text-sm font-medium ${username ? 'text-[var(--text-main)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'}`}
+               >
+                   <div className={`w-8 h-8 rounded-full flex items-center justify-center ${username ? 'bg-[var(--accent)] text-white shadow-md' : 'bg-[var(--bg-tertiary)]'}`}>
+                      <User size={16} />
+                   </div>
+                   <span className="max-w-[100px] truncate pr-2">
+                       {username || 'Sign In'}
+                   </span>
+               </button>
+
+               {/* User Dropdown Menu */}
+               {username && userMenuOpen && (
+                   <div className="absolute right-0 top-full mt-2 w-48 bg-[var(--bg-secondary)] rounded-xl shadow-xl border border-[var(--border)] py-1 animate-in fade-in zoom-in-95 duration-100 overflow-hidden z-[102]">
+                       <div className="px-4 py-3 border-b border-[var(--border)]">
+                           <p className="text-xs text-[var(--text-secondary)]">Signed in as</p>
+                           <p className="font-bold truncate">{username}</p>
+                       </div>
+                       <button 
+                           onClick={() => {
+                               handleLogout();
+                               setUserMenuOpen(false);
+                           }}
+                           className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 flex items-center gap-2 transition-colors"
+                       >
+                           <LogOut size={14} />
+                           Sign Out
+                       </button>
+                   </div>
+               )}
+           </div>
+        </div>
+
         {showLyrics ? (
           <LyricsView 
              currentSong={currentSong} 
@@ -950,6 +1135,9 @@ function AppContent() {
             onBack={() => handleNavigate('home')} 
             currentTheme={theme}
             onThemeChange={setTheme}
+            username={username}
+            onLogin={() => setAuthModalOpen(true)}
+            onLogout={handleLogout}
           />
         ) : currentView === 'search' ? (
           <UnifiedSearch 
@@ -1056,6 +1244,8 @@ function AppContent() {
         />
       )}
       
+      <audio ref={audioRef} crossOrigin="anonymous" />
+      
       <ConfirmationModal 
         isOpen={deleteModalOpen}
         onClose={() => {
@@ -1065,6 +1255,12 @@ function AppContent() {
         onConfirm={confirmDeleteSong}
         title={t.deleteSong}
         message={t.deleteSongConfirm}
+      />
+
+      <AuthModal 
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
       />
       </div>
   );

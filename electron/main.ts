@@ -808,6 +808,7 @@ app.whenReady().then(async () => {
                 'Accept-Ranges': 'bytes',
                 'Content-Length': chunksize.toString(),
                 'Content-Type': mimeType,
+                'Access-Control-Allow-Origin': '*',
             }
         });
       } else {
@@ -827,6 +828,7 @@ app.whenReady().then(async () => {
                 'Content-Length': fileSize.toString(),
                 'Content-Type': mimeType,
                 'Accept-Ranges': 'bytes', // Advertise support for ranges
+                'Access-Control-Allow-Origin': '*',
             }
         });
       }
@@ -1261,6 +1263,13 @@ app.whenReady().then(async () => {
       let artist = metadata.common.artist || 'Unknown Artist';
       let title = metadata.common.title || path.basename(filePath, path.extname(filePath));
       let album = metadata.common.album || 'Unknown Album';
+      
+      let artwork: string | undefined = undefined;
+      if (metadata.common.picture && metadata.common.picture.length > 0) {
+        const picture = metadata.common.picture[0];
+        const format = picture.format || 'image/jpeg';
+        artwork = `data:${format};base64,${picture.data.toString('base64')}`;
+      }
 
       // Try to parse Artist - Title from filename if metadata is missing
       if (artist === 'Unknown Artist') {
@@ -1299,6 +1308,7 @@ app.whenReady().then(async () => {
         album: album,
         duration: metadata.format.duration || 0,
         lyrics: lyrics,
+        artwork: artwork,
       };
     } catch (error) {
       console.error(`Error parsing metadata for ${filePath}:`, error);
@@ -1309,6 +1319,7 @@ app.whenReady().then(async () => {
         artist: 'Unknown Artist',
         album: 'Unknown Album',
         duration: 0,
+        artwork: undefined,
       };
     }
   }
