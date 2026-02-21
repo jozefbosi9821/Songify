@@ -148,7 +148,18 @@ export const api = {
         return !!localStorage.getItem('token');
     },
 
-    getUsername() {
+   getUsername() {
         return localStorage.getItem('username');
+    },
+
+    async getChangelog() {
+        try {
+            const response = await fetch(`${API_URL}/api/changelog`);
+            if (!response.ok) throw new Error('Failed to fetch changelog');
+            return await response.json();
+        } catch (error) {
+            console.error('Error fetching changelog:', error);
+            return { content: 'Failed to load changelog.' };
+        }
     }
 };

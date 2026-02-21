@@ -139,10 +139,13 @@ function AppContent() {
         const lastVersion = localStorage.getItem('songify_version');
         
         if (currentVersion !== lastVersion) {
-          const content = await platform.getChangelog();
-          setChangelogContent(content);
-          setChangelogOpen(true);
-          localStorage.setItem('songify_version', currentVersion);
+          // Fetch changelog from backend instead of platform/local file
+          const data = await api.getChangelog();
+          if (data && data.content) {
+            setChangelogContent(data.content);
+            setChangelogOpen(true);
+            localStorage.setItem('songify_version', currentVersion);
+          }
         }
       } catch (error) {
         console.error('Failed to check version:', error);
