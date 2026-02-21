@@ -1,7 +1,7 @@
 {
   "name": "songify",
   "private": true,
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "A music player built with Electron, React, and Tailwind CSS",
   "author": "Jozef Gaming",
   "type": "module",
