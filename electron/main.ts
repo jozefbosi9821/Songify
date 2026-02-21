@@ -1372,6 +1372,20 @@ app.whenReady().then(async () => {
     return app.getVersion();
   });
 
+  // Get Changelog
+  ipcMain.handle('get-changelog', () => {
+    try {
+      const changelogPath = path.join(__dirname, '../../CHANGELOG.md');
+      if (fs.existsSync(changelogPath)) {
+        return fs.readFileSync(changelogPath, 'utf-8');
+      }
+      return '# Changelog\n\nNo changelog available.';
+    } catch (error) {
+      console.error('Error reading changelog:', error);
+      return '# Changelog\n\nFailed to load changelog.';
+    }
+  });
+
   // Open External Link
   ipcMain.handle('open-external', async (_, url) => {
     await shell.openExternal(url);

@@ -10,6 +10,7 @@ export interface Song {
   streamUrl?: string;
   soundcloudId?: number;
   permalink?: string;
+  inLibrary?: boolean;
 }
 
 export interface Playlist {
@@ -50,6 +51,7 @@ export interface ElectronAPI {
   downloadUpdate: () => Promise<void>;
   quitAndInstall: () => Promise<void>;
   onUpdateMessage: (callback: (event: any, data: any) => void) => () => void;
+  getChangelog: () => Promise<string>;
 }
 
 

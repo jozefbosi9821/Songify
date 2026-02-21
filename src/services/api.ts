@@ -101,6 +101,44 @@ export const api = {
         return await response.json();
     },
 
+    async changePassword(password: string, newPassword: string) {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('Not authenticated');
+
+        const response = await fetch(`${API_URL}/api/me/password`, {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ password, newPassword })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to change password');
+        return data;
+    },
+
+    async updateAvatar(file: File) {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('Not authenticated');
+
+        const formData = new FormData();
+        formData.append('avatar', file);
+
+        const response = await fetch(`${API_URL}/api/me/avatar`, {
+            method: 'POST',
+            headers: { 
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to update avatar');
+        return data;
+    },
+
     logout() {
         localStorage.removeItem('token');
         localStorage.removeItem('username');

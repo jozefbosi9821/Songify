@@ -13,10 +13,12 @@ import type { Song, Playlist } from './types';
 import { useLanguage, LanguageProvider } from './contexts/LanguageContext';
 import { platform } from './services/platform';
 import { soundcloud } from './services/soundcloud';
-import { User, LogOut, Settings as SettingsIcon } from 'lucide-react';
+import { User, Settings as SettingsIcon } from 'lucide-react';
 
 import { ConfirmationModal } from './components/ConfirmationModal';
 import { AuthModal } from './components/AuthModal';
+import { ChangelogModal } from './components/ChangelogModal';
+import { UserMenu } from './components/UserMenu';
 import { api } from './services/api';
 
 function App() {
@@ -72,9 +74,83 @@ function AppContent() {
   
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [songToDelete, setSongToDelete] = useState<string | null>(null);
+  
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  const LIKED_SONGS_PLAYLIST_ID = 'liked-songs';
+
+  // Ensure Liked Songs playlist exists
+  useEffect(() => {
+    if (playlists.length > 0 && !playlists.find(p => p.id === LIKED_SONGS_PLAYLIST_ID)) {
+      setPlaylists(prev => [
+        {
+          id: LIKED_SONGS_PLAYLIST_ID,
+          name: 'Liked Songs',
+          createdAt: Date.now(),
+          songs: [],
+          coverPath: '' 
+        },
+        ...prev
+      ]);
+    }
+  }, [playlists.length]); // Check when playlists loaded
+
+  const toggleLike = (song: Song) => {
+    setPlaylists(prev => {
+      const likedPlaylist = prev.find(p => p.id === LIKED_SONGS_PLAYLIST_ID);
+      if (!likedPlaylist) return prev;
+
+      const isLiked = likedPlaylist.songs.includes(song.path);
+      let newSongs = [...likedPlaylist.songs];
+
+      if (isLiked) {
+        newSongs = newSongs.filter(path => path !== song.path);
+      } else {
+        newSongs = [song.path, ...newSongs];
+      }
+
+      return prev.map(p => 
+        p.id === LIKED_SONGS_PLAYLIST_ID 
+          ? { ...p, songs: newSongs }
+          : p
+      );
+    });
+
+    // If it's an online song being liked, ensure it's marked as in library (optional, but good for persistence logic if we were filtering)
+    // For now, we just rely on the playlist presence.
+  };
+
+  const isLiked = (songPath: string) => {
+    const likedPlaylist = playlists.find(p => p.id === LIKED_SONGS_PLAYLIST_ID);
+    return likedPlaylist?.songs.includes(songPath) || false;
+  };
 
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
+  
+  const [changelogOpen, setChangelogOpen] = useState(false);
+  const [changelogContent, setChangelogContent] = useState('');
+
+  // Check version and show changelog
+  useEffect(() => {
+    const checkVersion = async () => {
+      try {
+        const currentVersion = await platform.getAppVersion();
+        const lastVersion = localStorage.getItem('songify_version');
+        
+        if (currentVersion !== lastVersion) {
+          const content = await platform.getChangelog();
+          setChangelogContent(content);
+          setChangelogOpen(true);
+          localStorage.setItem('songify_version', currentVersion);
+        }
+      } catch (error) {
+        console.error('Failed to check version:', error);
+      }
+    };
+    
+    checkVersion();
+  }, []);
 
   // Check auth on mount
   useEffect(() => {
@@ -859,10 +935,7 @@ function AppContent() {
     }
   };
 
-  const handleArtistClick = (artist: string) => {
-    setSelectedArtist(artist);
-    setCurrentView('artist');
-  };
+
 
   const handleDownloadSong = async (url: string) => {
     const result = await platform.downloadSong(url);
@@ -991,10 +1064,10 @@ function AppContent() {
   };
 
   const handlePlayOnline = (song: Song) => {
-      // Add to songs list temporarily if not exists
+      // Add to songs list temporarily if not exists, but mark as not in library
       setSongs(prev => {
           if (prev.some(s => s.path === song.path)) return prev;
-          return [...prev, song];
+          return [...prev, { ...song, inLibrary: false }];
       });
 
       // Set queue to just this song and play
@@ -1013,7 +1086,8 @@ function AppContent() {
       }
       return [];
     }
-    return songs;
+    // Only show songs that are explicitly in the library (or legacy songs without the flag)
+    return songs.filter(s => s.inLibrary !== false);
   };
 
   const getPlaylistDetails = () => {
@@ -1040,19 +1114,6 @@ function AppContent() {
   const queueSongs = useMemo(() => {
     return queue.map(path => songs.find(s => s.path === path)).filter((s): s is Song => !!s);
   }, [queue, songs]);
-
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const userMenuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setUserMenuOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   return (
     <div className={`h-screen flex flex-col overflow-hidden transition-colors duration-300 ${theme}`} style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-main)' }}>
@@ -1089,9 +1150,9 @@ function AppContent() {
 
            <div className="h-6 w-[1px] bg-[var(--border)]" />
 
-           <div className="relative" ref={userMenuRef}>
+           <div className="relative">
                <button 
-                   onClick={() => username ? setUserMenuOpen(!userMenuOpen) : setAuthModalOpen(true)}
+                   onClick={() => setUserMenuOpen(true)}
                    className={`flex items-center gap-3 px-2 rounded-full transition-all text-sm font-medium ${username ? 'text-[var(--text-main)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'}`}
                >
                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${username ? 'bg-[var(--accent)] text-white shadow-md' : 'bg-[var(--bg-tertiary)]'}`}>
@@ -1101,28 +1162,16 @@ function AppContent() {
                        {username || 'Sign In'}
                    </span>
                </button>
-
-               {/* User Dropdown Menu */}
-               {username && userMenuOpen && (
-                   <div className="absolute right-0 top-full mt-2 w-48 bg-[var(--bg-secondary)] rounded-xl shadow-xl border border-[var(--border)] py-1 animate-in fade-in zoom-in-95 duration-100 overflow-hidden z-[102]">
-                       <div className="px-4 py-3 border-b border-[var(--border)]">
-                           <p className="text-xs text-[var(--text-secondary)]">Signed in as</p>
-                           <p className="font-bold truncate">{username}</p>
-                       </div>
-                       <button 
-                           onClick={() => {
-                               handleLogout();
-                               setUserMenuOpen(false);
-                           }}
-                           className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 flex items-center gap-2 transition-colors"
-                       >
-                           <LogOut size={14} />
-                           Sign Out
-                       </button>
-                   </div>
-               )}
            </div>
         </div>
+
+        <UserMenu 
+            username={username}
+            onLogin={() => setAuthModalOpen(true)}
+            onLogout={handleLogout}
+            isOpen={userMenuOpen}
+            onClose={() => setUserMenuOpen(false)}
+        />
 
         {showLyrics ? (
           <LyricsView 
@@ -1135,21 +1184,13 @@ function AppContent() {
             onBack={() => handleNavigate('home')} 
             currentTheme={theme}
             onThemeChange={setTheme}
-            username={username}
-            onLogin={() => setAuthModalOpen(true)}
-            onLogout={handleLogout}
           />
         ) : currentView === 'search' ? (
           <UnifiedSearch 
-            songs={songs}
-            onPlayLocal={(song) => {
-              setQueue([song.path]);
-              setCurrentSongIndex(0);
-              setIsPlaying(true);
-            }}
             onPlayOnline={handlePlayOnline}
             onDownload={handleDownloadSong}
-            onArtistClick={handleArtistClick}
+            onToggleLike={toggleLike}
+            isLiked={isLiked}
           />
         ) : currentView === 'artist' && selectedArtist ? (
           <ArtistPage 
@@ -1203,6 +1244,8 @@ function AppContent() {
             onGoToArtist={handleGoToArtist}
             onEditPlaylist={handleEditPlaylist}
             onSortPlaylist={handleSortPlaylist}
+            onToggleLike={toggleLike}
+            isLiked={isLiked}
           />
         )}
         </div>
@@ -1261,6 +1304,12 @@ function AppContent() {
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
         onLoginSuccess={handleLoginSuccess}
+      />
+
+      <ChangelogModal 
+        isOpen={changelogOpen}
+        onClose={() => setChangelogOpen(false)}
+        changelog={changelogContent}
       />
       </div>
   );

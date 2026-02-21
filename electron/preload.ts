@@ -34,5 +34,6 @@ contextBridge.exposeInMainWorld('electron', {
     return () => {
         ipcRenderer.removeListener('update-message', subscription);
     };
-  }
+  },
+  getChangelog: () => ipcRenderer.invoke('get-changelog'),
 });

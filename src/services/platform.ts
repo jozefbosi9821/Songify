@@ -207,6 +207,13 @@ class PlatformService {
         }
         return () => {};
     }
+
+    async getChangelog(): Promise<string> {
+        if (isElectron() && window.electron.getChangelog) {
+            return window.electron.getChangelog();
+        }
+        return '# Changelog\n\nChangelog not available on this platform.';
+    }
 }
 
 export const platform = new PlatformService();

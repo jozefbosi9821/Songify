@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Music, Play, Clock, MoreHorizontal, Edit2, ArrowDownAZ, User, ListPlus, PlayCircle, Disc, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Music, Play, Clock, MoreHorizontal, Edit2, ArrowDownAZ, User, ListPlus, PlayCircle, Disc, Search, Heart } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import type { Song, Playlist } from '../types';
@@ -30,6 +30,8 @@ interface MainContentProps {
   onGoToArtist?: (artist: string) => void;
   onEditPlaylist?: (id: string, data: Partial<Playlist>) => void;
   onSortPlaylist?: (playlistId: string, sortBy: 'title' | 'artist' | 'album') => void;
+  onToggleLike?: (song: Song) => void;
+  isLiked?: (songPath: string) => boolean;
 }
 
 export function MainContent({ 
@@ -51,7 +53,9 @@ export function MainContent({
   onGoToArtist,
   onEditPlaylist,
   onSortPlaylist,
-  onReorderPlaylist
+  onReorderPlaylist,
+  onToggleLike,
+  isLiked
 }: MainContentProps) {
   const { t } = useLanguage();
   const [activeMenuSongPath, setActiveMenuSongPath] = useState<string | null>(null);
@@ -365,7 +369,18 @@ export function MainContent({
                                 {formatTime(song.duration)}
                             </div>
                             
-                            <div className="relative flex justify-end">
+                            <div className="relative flex justify-end items-center gap-2">
+                                <button 
+                                    className={`p-2 rounded-lg transition-colors ${isLiked?.(song.path) ? 'text-[var(--accent)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-main)] hover:bg-[var(--bg-main)]'}`}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onToggleLike?.(song);
+                                    }}
+                                    title={isLiked?.(song.path) ? "Unlike" : "Like"}
+                                >
+                                    <Heart size={16} fill={isLiked?.(song.path) ? "currentColor" : "none"} />
+                                </button>
+
                                 <div 
                                     className="p-2 hover:bg-[var(--bg-main)] rounded-lg transition-colors text-[var(--text-secondary)] hover:text-[var(--text-main)]"
                                     onClick={(e) => {
