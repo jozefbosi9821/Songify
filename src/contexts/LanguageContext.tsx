@@ -159,6 +159,11 @@ interface Translations {
     noSongsFound: string;
     poweredBy: string;
     searchAndDownload: string;
+    
+    // Playback
+    autoplay: string;
+    autoplayDesc: string;
+    changeCover: string;
   };
 }
 
@@ -290,7 +295,10 @@ const translations: Translations = {
     yourPlaylists: 'Your Playlists',
     noSongsFound: 'No songs found. Add music to get started!',
     poweredBy: 'Powered by SoundCloud',
-    searchAndDownload: 'Search & Download'
+    searchAndDownload: 'Search & Download',
+    autoplay: 'Autoplay Recommendations',
+    autoplayDesc: 'Automatically play similar songs when your queue ends.',
+    changeCover: 'Change Cover'
   },
   sq: {
     home: 'Kreu',
@@ -418,7 +426,10 @@ const translations: Translations = {
     yourPlaylists: 'Listat e Tua',
     noSongsFound: 'Nuk u gjet asnjë këngë. Shto muzikë për të filluar!',
     poweredBy: 'Mundësuar nga SoundCloud',
-    searchAndDownload: 'Kërko & Shkarko'
+    searchAndDownload: 'Kërko & Shkarko',
+    autoplay: 'Rekomandime Automatike',
+    autoplayDesc: 'Luaj automatikisht këngë të ngjashme kur përfundon rradha.',
+    changeCover: 'Ndrysho Kopertinën'
   },
   es: {
     home: 'Inicio',
@@ -546,7 +557,10 @@ const translations: Translations = {
     yourPlaylists: 'Tus Listas',
     noSongsFound: 'No se encontraron canciones. ¡Añade música para empezar!',
     poweredBy: 'Desarrollado por SoundCloud',
-    searchAndDownload: 'Buscar y Descargar'
+    searchAndDownload: 'Buscar y Descargar',
+    autoplay: 'Autoreproducción de Recomendaciones',
+    autoplayDesc: 'Reproducir automáticamente canciones similares cuando termine la cola.',
+    changeCover: 'Cambiar Portada'
   },
   de: {
     home: 'Startseite',
@@ -674,7 +688,10 @@ const translations: Translations = {
     yourPlaylists: 'Deine Playlists',
     noSongsFound: 'Keine Songs gefunden. Füge Musik hinzu, um zu beginnen!',
     poweredBy: 'Bereitgestellt von SoundCloud',
-    searchAndDownload: 'Suchen & Herunterladen'
+    searchAndDownload: 'Suchen & Herunterladen',
+    autoplay: 'Automatische Wiedergabe',
+    autoplayDesc: 'Automatisch ähnliche Songs abspielen, wenn die Warteschlange endet.',
+    changeCover: 'Cover ändern'
   },
   fr: {
     home: 'Accueil',
@@ -802,7 +819,10 @@ const translations: Translations = {
     yourPlaylists: 'Vos Playlists',
     noSongsFound: 'Aucune chanson trouvée. Ajoutez de la musique pour commencer !',
     poweredBy: 'Propulsé par SoundCloud',
-    searchAndDownload: 'Rechercher et Télécharger'
+    searchAndDownload: 'Rechercher et Télécharger',
+    autoplay: 'Lecture Automatique',
+    autoplayDesc: 'Lire automatiquement des chansons similaires lorsque la file d\'attente se termine.',
+    changeCover: 'Changer la couverture'
   },
   it: {
     home: 'Home',
@@ -930,7 +950,10 @@ const translations: Translations = {
     yourPlaylists: 'Le Tue Playlist',
     noSongsFound: 'Nessuna canzone trovata. Aggiungi musica per iniziare!',
     poweredBy: 'Powered by SoundCloud',
-    searchAndDownload: 'Cerca e Scarica'
+    searchAndDownload: 'Cerca e Scarica',
+    autoplay: 'Riproduzione Automatica',
+    autoplayDesc: 'Riproduci automaticamente brani simili quando la coda finisce.',
+    changeCover: 'Cambia Copertina'
   }
 };
 

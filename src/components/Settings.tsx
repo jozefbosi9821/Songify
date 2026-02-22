@@ -1,4 +1,4 @@
-import { Trash2, ArrowLeft, Palette, Info, Database, FolderOpen, Github, Monitor, Keyboard, ExternalLink } from 'lucide-react';
+import { Trash2, ArrowLeft, Palette, Info, Database, FolderOpen, Github, Monitor, Keyboard, ExternalLink, PlayCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import songifyLogo from '../assets/Songify.png';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -8,6 +8,8 @@ interface SettingsProps {
     onBack: () => void;
     currentTheme: string;
     onThemeChange: (theme: string) => void;
+    autoplayEnabled: boolean;
+    onAutoplayChange: (enabled: boolean) => void;
 }
 
 const LANGUAGES: { id: Language, name: string, flag: string }[] = [
@@ -21,7 +23,7 @@ const LANGUAGES: { id: Language, name: string, flag: string }[] = [
 
 import { platform } from '../services/platform';
 
-export function Settings({ onBack, currentTheme, onThemeChange }: SettingsProps) {
+export function Settings({ onBack, currentTheme, onThemeChange, autoplayEnabled, onAutoplayChange }: SettingsProps) {
     const { language, setLanguage, t } = useLanguage();
 
     const themes = [
@@ -151,6 +153,27 @@ export function Settings({ onBack, currentTheme, onThemeChange }: SettingsProps)
                                 ))}
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                {/* Playback Section */}
+                <div>
+                    <div className="flex items-center gap-3 mb-6">
+                        <PlayCircle className="text-[var(--accent)]" />
+                        <h2 className="text-xl font-bold text-[var(--text-main)]">{t.playing}</h2>
+                    </div>
+
+                    <div className="bg-[var(--bg-tertiary)] p-6 rounded-xl border border-[var(--border)] flex items-center justify-between">
+                        <div>
+                            <h3 className="text-[var(--text-main)] font-medium mb-1">{t.autoplay}</h3>
+                            <p className="text-[var(--text-secondary)] text-sm">{t.autoplayDesc}</p>
+                        </div>
+                        <button 
+                            onClick={() => onAutoplayChange(!autoplayEnabled)}
+                            className={`w-12 h-6 rounded-full relative transition-colors ${autoplayEnabled ? 'bg-[var(--accent)]' : 'bg-gray-600'}`}
+                        >
+                            <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${autoplayEnabled ? 'left-7' : 'left-1'}`} />
+                        </button>
                     </div>
                 </div>
 

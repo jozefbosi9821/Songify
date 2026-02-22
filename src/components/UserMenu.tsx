@@ -19,7 +19,7 @@ interface UserStats {
   avatarUrl?: string;
 }
 
-export function UserMenu({ username, onLogin, onLogout, isOpen, onClose }: UserMenuProps) {
+export const UserMenu = React.memo(function UserMenu({ username, onLogin, onLogout, isOpen, onClose }: UserMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<'overview' | 'settings'>('overview');
   const [stats, setStats] = useState<UserStats | null>(null);
@@ -357,4 +357,4 @@ export function UserMenu({ username, onLogin, onLogout, isOpen, onClose }: UserM
       </div>
     </div>
   );
-}
+});

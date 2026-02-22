@@ -1,4 +1,4 @@
-import { Home, Search, Library, Plus, Settings, List, Trash2 } from 'lucide-react';
+import { Home, Search, Library, Plus, Settings, List, Trash2, Heart } from 'lucide-react';
 import type { Playlist } from '../types';
 import songifyLogo from '../assets/Songify.png';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -90,26 +90,30 @@ export function Sidebar({ onNavigate, currentView, playlists = [], onCreatePlayl
                     onClick={() => onNavigate?.('playlist', playlist.id)}
                   >
                     <div className="w-10 h-10 bg-[var(--bg-tertiary)] rounded-lg flex items-center justify-center text-[var(--text-secondary)] group-hover:text-[var(--text-main)] shadow-sm group-hover:shadow-md transition-all group-hover:scale-105 overflow-hidden">
-                      {playlist.coverPath ? (
+                      {playlist.id === 'liked-songs' ? (
+                          <Heart size={18} className="text-red-500 fill-current" />
+                      ) : playlist.coverPath ? (
                           <img src={playlist.coverPath} alt="" className="w-full h-full object-cover" />
                       ) : (
                           <List size={18} />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-bold truncate text-sm">{playlist.name}</div>
+                      <div className="font-bold truncate text-sm">{playlist.id === 'liked-songs' ? 'Liked Songs' : playlist.name}</div>
                       <div className="text-xs opacity-60 truncate font-medium">{playlist.songs.length} {t.songs}</div>
                     </div>
-                    <button 
-                      className="opacity-0 group-hover:opacity-100 p-2 text-[var(--text-secondary)] hover:text-red-500 transition-all hover:bg-[var(--bg-main)] rounded-lg hover:scale-110 active:scale-95 shadow-sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeletePlaylist?.(playlist.id);
-                      }}
-                      title={t.deletePlaylist}
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    {playlist.id !== 'liked-songs' && (
+                      <button 
+                        className="opacity-0 group-hover:opacity-100 p-2 text-[var(--text-secondary)] hover:text-red-500 transition-all hover:bg-[var(--bg-main)] rounded-lg hover:scale-110 active:scale-95 shadow-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeletePlaylist?.(playlist.id);
+                        }}
+                        title={t.deletePlaylist}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
                 ))
             )}

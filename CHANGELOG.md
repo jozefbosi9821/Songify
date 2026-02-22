@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.3.0] - 2026-02-22
+
+### Added
+- **Smart Recommendations**: Automatically play similar songs when your queue ends, powered by SoundCloud related tracks.
+- **Autoplay Settings**: New toggle in Settings to enable/disable autoplay recommendations.
+- **Liked Songs Lockdown**: The "Liked Songs" playlist is now permanent (non-deletable), has a distinctive heart icon, and cannot be renamed or customized, ensuring a consistent experience.
+
+### Fixed
+- **User Interface**: Fixed an issue where the User Menu would flicker or flash repeatedly while music was playing.
+
 ## [1.2.2] - 2026-02-22
 
 ### Added

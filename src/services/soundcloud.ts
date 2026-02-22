@@ -50,6 +50,10 @@ export class SoundCloudService {
         return platform.soundcloudArtistTracks(artistName);
     }
 
+    public async getRelatedTracks(trackId: number): Promise<SoundCloudTrack[]> {
+        return platform.soundcloudRelated(trackId);
+    }
+
     public getBestTranscodingUrl(track: SoundCloudTrack): string | null {
         if (!track.media || !track.media.transcodings) return null;
         

@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('electron', {
   getSoundCloudClientId: () => ipcRenderer.invoke('get-soundcloud-client-id'),
   soundcloudSearch: (query: string) => ipcRenderer.invoke('soundcloud-search', query),
   soundcloudArtistTracks: (artistName: string) => ipcRenderer.invoke('soundcloud-artist-tracks', artistName),
+  soundcloudRelated: (trackId: number) => ipcRenderer.invoke('soundcloud-related', trackId),
   soundcloudStream: (transcodingUrl: string, permalinkUrl?: string) => ipcRenderer.invoke('soundcloud-stream', transcodingUrl, permalinkUrl),
   
   // Auto Update

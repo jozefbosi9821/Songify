@@ -141,6 +141,14 @@ class PlatformService {
         return [];
     }
 
+    async soundcloudRelated(trackId: number): Promise<any[]> {
+        if (isElectron() && window.electron.soundcloudRelated) {
+            return window.electron.soundcloudRelated(trackId);
+        }
+        console.warn('SoundCloud related tracks not available (electron bridge missing)');
+        return [];
+    }
+
     async soundcloudStream(transcodingUrl: string, permalinkUrl?: string): Promise<string | null> {
         if (isElectron() && window.electron.soundcloudStream) {
             return window.electron.soundcloudStream(transcodingUrl, permalinkUrl);

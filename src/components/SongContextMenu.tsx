@@ -1,4 +1,4 @@
-import { PlayCircle, ListPlus, User, Trash2 } from 'lucide-react';
+import { PlayCircle, ListPlus, User, Trash2, Heart } from 'lucide-react';
 import type { Song, Playlist } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -124,8 +124,12 @@ export function SongContextMenu({
                                 onClose();
                             }}
                         >
-                            <ListPlus size={14} className="text-[var(--text-secondary)]" />
-                            {playlist.name}
+                            {playlist.id === 'liked-songs' ? (
+                                <Heart size={14} className="text-red-500 fill-current" />
+                            ) : (
+                                <ListPlus size={14} className="text-[var(--text-secondary)]" />
+                            )}
+                            {playlist.id === 'liked-songs' ? 'Liked Songs' : playlist.name}
                         </button>
                     ))
                 ) : (

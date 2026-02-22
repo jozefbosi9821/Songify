@@ -498,6 +498,48 @@ ipcMain.handle('soundcloud-artist-tracks', async (_, artistName) => {
     }
 });
 
+ipcMain.handle('soundcloud-related', async (_, trackId) => {
+    const token = await getSoundCloudTokenInternal();
+    const headers: Record<string, string> = {};
+
+    if (token) {
+        headers['Authorization'] = `OAuth ${token}`;
+    }
+
+    let clientId = CONFIG.SOUNDCLOUD_CLIENT_ID || FALLBACK_PUBLIC_ID;
+
+    try {
+        let url = `https://api-v2.soundcloud.com/tracks/${trackId}/related?limit=20`;
+        
+        if (!token) {
+             url += `&client_id=${clientId}`;
+        }
+
+        let response = await fetch(url, { headers });
+        
+        // Retry logic
+        if (!response.ok && !token) {
+             console.warn(`SoundCloud related tracks failed with ID ${clientId}. Trying scraped ID...`);
+             const scrapedId = await scrapeClientId();
+             if (scrapedId && scrapedId !== clientId) {
+                 url = url.replace(`client_id=${clientId}`, `client_id=${scrapedId}`);
+                 response = await fetch(url, { headers });
+             } else if (clientId !== FALLBACK_PUBLIC_ID) {
+                 url = url.replace(`client_id=${clientId}`, `client_id=${FALLBACK_PUBLIC_ID}`);
+                 response = await fetch(url, { headers });
+             }
+        }
+        
+        if (!response.ok) return [];
+        
+        const data = await response.json();
+        return data.collection || [];
+    } catch (error) {
+        console.error('SoundCloud related tracks error:', error);
+        return [];
+    }
+});
+
 ipcMain.handle('soundcloud-stream', async (_, transcodingUrl, permalinkUrl?: string) => {
     const token = await getSoundCloudTokenInternal();
     

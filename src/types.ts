@@ -44,6 +44,7 @@ export interface ElectronAPI {
   getSoundCloudClientId: () => Promise<string | null>;
   soundcloudSearch: (query: string) => Promise<any[]>;
   soundcloudArtistTracks: (artistName: string) => Promise<any[]>;
+  soundcloudRelated: (trackId: number) => Promise<any[]>;
   soundcloudStream: (transcodingUrl: string, permalinkUrl?: string) => Promise<string | null>;
   
   // Auto Update

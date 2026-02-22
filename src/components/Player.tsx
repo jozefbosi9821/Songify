@@ -1,4 +1,4 @@
-import { Play, SkipBack, SkipForward, Repeat, Shuffle, Mic2, ListMusic, Volume2, Pause, VolumeX, Repeat1, Music, Plus, ListPlus } from 'lucide-react';
+import { Play, SkipBack, SkipForward, Repeat, Shuffle, Mic2, ListMusic, Volume2, Pause, VolumeX, Repeat1, Music, Plus, ListPlus, Heart } from 'lucide-react';
 import type { Song, Playlist } from '../types';
 import { useRef, useEffect, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -144,9 +144,13 @@ export function Player({
                                             }}
                                         >
                                             <div className="w-8 h-8 rounded-lg bg-[var(--bg-tertiary)] flex items-center justify-center text-[var(--text-secondary)] group-hover:bg-[var(--bg-main)] group-hover:text-[var(--accent)] transition-colors">
-                                                <ListPlus size={16} />
+                                                {playlist.id === 'liked-songs' ? (
+                                                    <Heart size={16} className="text-red-500 fill-current" />
+                                                ) : (
+                                                    <ListPlus size={16} />
+                                                )}
                                             </div>
-                                            <span className="truncate">{playlist.name}</span>
+                                            <span className="truncate">{playlist.id === 'liked-songs' ? 'Liked Songs' : playlist.name}</span>
                                         </button>
                                     ))
                                 ) : (

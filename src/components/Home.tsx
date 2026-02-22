@@ -1,4 +1,4 @@
-import { Play, Music, ListMusic, Search, Zap } from 'lucide-react';
+import { Play, Music, ListMusic, Search, Zap, Heart } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import type { Song, Playlist } from '../types';
 
@@ -119,11 +119,17 @@ export function Home({ songs, playlists, onNavigate, onPlaySong }: HomeProps) {
                         className="bg-[var(--bg-tertiary)]/50 hover:bg-[var(--bg-tertiary)] p-4 rounded-2xl transition-all cursor-pointer flex items-center gap-4 border border-transparent hover:border-[var(--border)]"
                         onClick={() => onNavigate('playlist', playlist.id)}
                     >
-                        <div className="w-16 h-16 bg-[var(--bg-secondary)] rounded-xl flex items-center justify-center text-[var(--text-secondary)] shadow-sm">
-                            <ListMusic size={24} />
+                        <div className="w-16 h-16 bg-[var(--bg-secondary)] rounded-xl flex items-center justify-center text-[var(--text-secondary)] shadow-sm overflow-hidden relative">
+                            {playlist.id === 'liked-songs' ? (
+                                <Heart size={24} className="text-red-500 fill-current" />
+                            ) : playlist.coverPath ? (
+                                <img src={playlist.coverPath} alt={playlist.name} className="w-full h-full object-cover" />
+                            ) : (
+                                <ListMusic size={24} />
+                            )}
                         </div>
                         <div>
-                            <h3 className="font-bold text-[var(--text-main)] text-lg">{playlist.name}</h3>
+                            <h3 className="font-bold text-[var(--text-main)] text-lg">{playlist.id === 'liked-songs' ? 'Liked Songs' : playlist.name}</h3>
                             <p className="text-sm text-[var(--text-secondary)]">{playlist.songs.length} songs</p>
                         </div>
                     </div>

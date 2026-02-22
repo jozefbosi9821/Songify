@@ -190,47 +190,57 @@ export function MainContent({
               
               <div className="relative z-10 flex flex-row items-end gap-8 p-8 bg-[var(--bg-tertiary)]/20 backdrop-blur-md rounded-3xl border border-[var(--border)] shadow-xl">
                   <div 
-                      className={`w-48 h-48 shadow-2xl flex items-center justify-center rounded-2xl border border-[var(--border)]/50 bg-[var(--bg-secondary)] overflow-hidden shrink-0 relative group/cover ${currentPlaylistId ? 'cursor-pointer' : ''}`}
-                      onClick={handleCoverClick}
+                      className={`w-48 h-48 shadow-2xl flex items-center justify-center rounded-2xl border border-[var(--border)]/50 bg-[var(--bg-secondary)] overflow-hidden shrink-0 relative group/cover ${currentPlaylistId && currentPlaylistId !== 'liked-songs' ? 'cursor-pointer' : ''}`}
+                      onClick={() => {
+                        if (currentPlaylistId !== 'liked-songs') handleCoverClick();
+                      }}
                   >
-                    {currentPlaylistId && playlists.find(p => p.id === currentPlaylistId)?.coverPath ? (
+                    {currentPlaylistId === 'liked-songs' ? (
+                        <Heart size={64} className="text-red-500 fill-current drop-shadow-lg" />
+                    ) : currentPlaylistId && playlists.find(p => p.id === currentPlaylistId)?.coverPath ? (
                         <img src={playlists.find(p => p.id === currentPlaylistId)?.coverPath} alt="" className="w-full h-full object-cover" />
                     ) : (
                         <Music size={64} className="text-[var(--text-main)] drop-shadow-lg opacity-80" />
                     )}
-                    {currentPlaylistId && (
-                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/cover:opacity-100 transition-opacity">
-                            <Edit2 className="text-white" size={32} />
-                        </div>
+                    {currentPlaylistId && currentPlaylistId !== 'liked-songs' && (
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/cover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-2 backdrop-blur-sm">
+                          <Edit2 size={24} className="text-white drop-shadow-md" />
+                          <span className="text-white text-xs font-bold uppercase tracking-wider drop-shadow-md">{t.changeCover}</span>
+                      </div>
                     )}
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
                   </div>
-                  
-                  <div className="flex flex-col justify-end w-full overflow-hidden pb-2 text-left items-start">
-                    <span className="text-xs font-bold text-[var(--text-secondary)] uppercase tracking-widest mb-2 bg-[var(--bg-tertiary)]/50 w-fit px-3 py-1 rounded-full border border-[var(--border)]">{!currentPlaylistId ? t.library : t.playlist}</span>
-                    
-                    {isEditingTitle && currentPlaylistId ? (
-                        <input
-                            className="text-6xl font-black mb-4 bg-transparent border-b-2 border-[var(--text-main)] outline-none w-full text-[var(--text-main)] placeholder-[var(--text-secondary)] text-left"
-                            value={tempTitle}
-                            onChange={(e) => setTempTitle(e.target.value)}
-                            onBlur={handleSaveTitle}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle()}
-                            autoFocus
-                        />
+
+                  <div className="flex-1 min-w-0 pb-2">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-bold tracking-wider text-[var(--text-secondary)] uppercase bg-[var(--bg-secondary)]/50 px-2 py-1 rounded-lg backdrop-blur-sm border border-[var(--border)]/30">
+                        {currentPlaylistId ? t.playlist : t.library}
+                      </span>
+                    </div>
+
+                    {isEditingTitle ? (
+                      <input
+                        type="text"
+                        value={tempTitle}
+                        onChange={(e) => setTempTitle(e.target.value)}
+                        onBlur={handleSaveTitle}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle()}
+                        className="text-6xl font-black mb-2 w-full bg-transparent border-b-2 border-[var(--accent)] focus:outline-none text-[var(--text-main)] placeholder-[var(--text-secondary)]/30 tracking-tight"
+                        autoFocus
+                      />
                     ) : (
-                        <h1 
-                            className={`text-6xl font-black mb-2 truncate text-[var(--text-main)] tracking-tight ${currentPlaylistId ? 'cursor-pointer hover:text-[var(--accent)] transition-colors' : ''}`}
-                            onClick={() => {
-                                if (currentPlaylistId) {
-                                    setTempTitle(title);
-                                    setIsEditingTitle(true);
-                                }
-                            }}
-                            title={currentPlaylistId ? t.clickToRename : undefined}
-                        >
-                            {title}
-                        </h1>
+                      <h1 
+                        className={`text-6xl font-black mb-2 truncate text-[var(--text-main)] tracking-tight ${currentPlaylistId && currentPlaylistId !== 'liked-songs' ? 'cursor-pointer hover:text-[var(--accent)] transition-colors' : ''}`}
+                        onClick={() => {
+                          if (currentPlaylistId && currentPlaylistId !== 'liked-songs') {
+                            setTempTitle(title);
+                            setIsEditingTitle(true);
+                          }
+                        }}
+                        title={currentPlaylistId && currentPlaylistId !== 'liked-songs' ? t.clickToRename : undefined}
+                      >
+                        {title}
+                      </h1>
                     )}
                     
                     {currentPlaylistId ? (
@@ -252,11 +262,13 @@ export function MainContent({
                             />
                         ) : (
                             <p 
-                                className="text-sm text-[var(--text-secondary)] mb-4 font-medium max-w-2xl line-clamp-2 hover:text-[var(--text-main)] cursor-pointer transition-colors"
-                                onClick={() => setIsEditingDescription(true)}
-                                title="Click to edit description"
+                                className={`text-sm text-[var(--text-secondary)] mb-4 font-medium max-w-2xl line-clamp-2 ${currentPlaylistId !== 'liked-songs' ? 'hover:text-[var(--text-main)] cursor-pointer' : ''} transition-colors`}
+                                onClick={() => {
+                                    if (currentPlaylistId !== 'liked-songs') setIsEditingDescription(true);
+                                }}
+                                title={currentPlaylistId !== 'liked-songs' ? "Click to edit description" : undefined}
                             >
-                                {playlists.find(p => p.id === currentPlaylistId)?.description || t.noDescription || "No description"}
+                                {playlists.find(p => p.id === currentPlaylistId)?.description || (currentPlaylistId === 'liked-songs' ? "Your liked songs" : t.noDescription || "No description")}
                             </p>
                         )
                     ) : (

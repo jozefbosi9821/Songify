@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import Hls from 'hls.js';
 import { Sidebar } from './components/Sidebar';
 import { Player } from './components/Player';
@@ -53,6 +53,14 @@ function AppContent() {
     const saved = localStorage.getItem('songify_repeat');
     return (saved as 'off' | 'all' | 'one') || 'off';
   });
+
+  const [autoplayEnabled, setAutoplayEnabled] = useState(() => {
+    return localStorage.getItem('songify_autoplay') !== 'false'; // Default true
+  });
+
+  useEffect(() => {
+    localStorage.setItem('songify_autoplay', autoplayEnabled.toString());
+  }, [autoplayEnabled]);
 
   useEffect(() => {
     localStorage.setItem('songify_shuffle', isShuffled.toString());
@@ -204,7 +212,7 @@ function AppContent() {
     syncFromCloud();
   };
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     api.logout();
     setUsername(null);
     setSongs([]); // Optional: clear local state on logout? Maybe keep it.
@@ -220,7 +228,11 @@ function AppContent() {
             }
         }
     });
-  };
+  }, []);
+
+  const handleOpenAuth = useCallback(() => setAuthModalOpen(true), []);
+  const handleCloseUserMenu = useCallback(() => setUserMenuOpen(false), []);
+
 
   // Sync Logic
   const latestLibraryState = useRef({ songs, playlists, settings: { theme, volume, isShuffled, repeatMode } });
@@ -383,8 +395,54 @@ function AppContent() {
           : currentSongIndex === queue.length - 1;
         
         if (isLastSong) {
-          setIsPlaying(false);
-          // Optional: Reset to start?
+          if (autoplayEnabled && currentSong) {
+             (async () => {
+                try {
+                  let seedId = currentSong.soundcloudId;
+                  if (!seedId && currentSong.artist && currentSong.title && currentSong.artist !== 'Unknown Artist') {
+                    try {
+                      const results = await soundcloud.search(`${currentSong.artist} ${currentSong.title}`);
+                      if (results && results.length > 0) seedId = results[0].id;
+                    } catch (e) {
+                      console.error("Autoplay search failed:", e);
+                    }
+                  }
+
+                  if (seedId) {
+                    const related = await soundcloud.getRelatedTracks(seedId);
+                    if (related && related.length > 0) {
+                      const newSongs: Song[] = related.map(t => ({
+                        path: `soundcloud:${t.id}`,
+                        title: t.title,
+                        artist: t.user.username,
+                        album: 'SoundCloud',
+                        duration: t.duration / 1000,
+                        artwork: t.artwork_url?.replace('large', 't500x500') || t.user.avatar_url,
+                        isOnline: true,
+                        soundcloudId: t.id,
+                        streamUrl: soundcloud.getBestTranscodingUrl(t) || undefined,
+                        permalink: t.permalink_url,
+                        inLibrary: false
+                      }));
+
+                      setSongs(prev => [...prev, ...newSongs]);
+                      setQueue(prev => [...prev, ...newSongs.map(s => s.path)]);
+                      setCurrentSongIndex(queue.length); 
+                      setIsPlaying(true);
+                    } else {
+                      setIsPlaying(false);
+                    }
+                  } else {
+                    setIsPlaying(false);
+                  }
+                } catch (e) {
+                  console.error("Autoplay error:", e);
+                  setIsPlaying(false);
+                }
+             })();
+          } else {
+            setIsPlaying(false);
+          }
         } else {
           playNext();
         }
@@ -400,7 +458,7 @@ function AppContent() {
       audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
       audio.removeEventListener('ended', handleEnded);
     };
-  }, [currentSongIndex, queue, isShuffled, shuffleOrder, repeatMode, currentSong, username]);
+  }, [currentSongIndex, queue, isShuffled, shuffleOrder, repeatMode, currentSong, username, autoplayEnabled]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -1141,7 +1199,7 @@ function AppContent() {
       const playlist = playlists.find(p => p.id === currentPlaylistId);
       if (playlist) {
         return {
-          title: playlist.name,
+          title: playlist.id === 'liked-songs' ? 'Liked Songs' : playlist.name,
           subtitle: `${t.createdOn} ${new Date(playlist.createdAt).toLocaleDateString()}`,
           color: 'from-purple-700 to-pink-600'
         };
@@ -1213,10 +1271,10 @@ function AppContent() {
 
         <UserMenu 
             username={username}
-            onLogin={() => setAuthModalOpen(true)}
+            onLogin={handleOpenAuth}
             onLogout={handleLogout}
             isOpen={userMenuOpen}
-            onClose={() => setUserMenuOpen(false)}
+            onClose={handleCloseUserMenu}
         />
 
         {showLyrics ? (
@@ -1230,6 +1288,8 @@ function AppContent() {
             onBack={() => handleNavigate('home')} 
             currentTheme={theme}
             onThemeChange={setTheme}
+            autoplayEnabled={autoplayEnabled}
+            onAutoplayChange={setAutoplayEnabled}
           />
         ) : currentView === 'search' ? (
           <UnifiedSearch 
