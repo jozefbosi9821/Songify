@@ -839,7 +839,18 @@ function AppContent() {
 
   }, [queue, isShuffled, shuffleOrder]);
 
-  const handlePlayNext = (songPath: string) => {
+  const handlePlayNext = (songOrPath: string | Song) => {
+      let songPath: string;
+      if (typeof songOrPath === 'string') {
+          songPath = songOrPath;
+      } else {
+          songPath = songOrPath.path;
+          setSongs(prev => {
+              if (prev.some(s => s.path === songPath)) return prev;
+              return [...prev, { ...songOrPath, inLibrary: false }];
+          });
+      }
+
       const newQueue = [...queue];
       const insertIndex = currentSongIndex + 1;
       newQueue.splice(insertIndex, 0, songPath);
@@ -866,7 +877,17 @@ function AppContent() {
       }
   };
 
-  const handleAddToQueue = (songPath: string) => {
+  const handleAddToQueue = (songOrPath: string | Song) => {
+      let songPath: string;
+      if (typeof songOrPath === 'string') {
+          songPath = songOrPath;
+      } else {
+          songPath = songOrPath.path;
+          setSongs(prev => {
+              if (prev.some(s => s.path === songPath)) return prev;
+              return [...prev, { ...songOrPath, inLibrary: false }];
+          });
+      }
       setQueue(prev => [...prev, songPath]);
   };
 
@@ -964,7 +985,19 @@ function AppContent() {
     return result;
   };
 
-  const handleAddToPlaylist = (playlistId: string, songPath: string) => {
+  const handleAddToPlaylist = (playlistId: string, songOrPath: string | Song) => {
+    let songPath: string;
+    if (typeof songOrPath === 'string') {
+        songPath = songOrPath;
+    } else {
+        songPath = songOrPath.path;
+        // Ensure song is in library (marked as inLibrary: true since added to playlist)
+        setSongs(prev => {
+            if (prev.some(s => s.path === songPath)) return prev;
+            return [...prev, { ...songOrPath, inLibrary: true }];
+        });
+    }
+
     setPlaylists(prevPlaylists => 
       prevPlaylists.map(playlist => {
         if (playlist.id === playlistId) {
@@ -1089,7 +1122,17 @@ function AppContent() {
       }
       return [];
     }
-    // Only show songs that are explicitly in the library (or legacy songs without the flag)
+    
+    // User Request: "Make it so my music is basically all songs in Playlists combined"
+    // If there are playlists, filter "My Music" to only show songs that are in at least one playlist.
+    // We also include Liked Songs since it's a playlist.
+    // If no playlists exist, we show all library songs to ensure the app isn't empty for new users.
+    if (playlists.length > 0) {
+        const allPlaylistSongs = new Set(playlists.flatMap(p => p.songs));
+        return songs.filter(s => allPlaylistSongs.has(s.path) && s.inLibrary !== false);
+    }
+
+    // Default: Show all songs in library
     return songs.filter(s => s.inLibrary !== false);
   };
 
@@ -1194,15 +1237,23 @@ function AppContent() {
             onDownload={handleDownloadSong}
             onToggleLike={toggleLike}
             isLiked={isLiked}
+            playlists={playlists}
+            onAddToPlaylist={handleAddToPlaylist}
+            onPlayNext={handlePlayNext}
+            onAddToQueue={handleAddToQueue}
+            onGoToArtist={handleGoToArtist}
           />
         ) : currentView === 'artist' && selectedArtist ? (
           <ArtistPage 
              artistName={selectedArtist}
              localSongs={songs}
-             onBack={() => handleNavigate('search')}
-             onPlayLocal={(song) => {
-                setQueue([song.path]);
-                setCurrentSongIndex(0);
+             onBack={() => handleNavigate('home')}
+             onPlayLocal={(song, contextSongs) => {
+                const songsToQueue = contextSongs && contextSongs.length > 0 ? contextSongs : [song];
+                const newQueue = songsToQueue.map(s => s.path);
+                setQueue(newQueue);
+                const index = newQueue.indexOf(song.path);
+                setCurrentSongIndex(index !== -1 ? index : 0);
                 setIsPlaying(true);
              }}
              onPlayOnline={handlePlayOnline}
@@ -1287,6 +1338,8 @@ function AppContent() {
           onToggleRepeat={toggleRepeat}
           showQueue={showQueue}
           onToggleQueue={() => setShowQueue(!showQueue)}
+          playlists={playlists}
+          onAddToPlaylist={handleAddToPlaylist}
         />
       )}
       

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Search, Loader2, Play, Globe, Heart } from 'lucide-react';
-import type { Song } from '../types';
+import { Search, Loader2, Play, Globe, Heart, Clock, MoreHorizontal } from 'lucide-react';
+import type { Song, Playlist } from '../types';
 import { soundcloud } from '../services/soundcloud';
+import { SongContextMenu } from './SongContextMenu';
 
 interface SearchResult {
   title: string;
@@ -19,12 +20,45 @@ interface UnifiedSearchProps {
   onDownload: (url: string) => Promise<{ success: boolean; path?: string; error?: string }>;
   onToggleLike?: (song: Song) => void;
   isLiked?: (songPath: string) => boolean;
+  playlists: Playlist[];
+  onAddToPlaylist: (playlistId: string, song: Song | string) => void;
+  onPlayNext?: (song: Song | string) => void;
+  onAddToQueue?: (song: Song | string) => void;
+  onGoToArtist?: (artist: string) => void;
 }
 
-export function UnifiedSearch({ onPlayOnline, onToggleLike, isLiked }: UnifiedSearchProps) {
+export function UnifiedSearch({ 
+    onPlayOnline, 
+    // onDownload, 
+    onToggleLike, 
+    isLiked,
+    playlists,
+    onAddToPlaylist,
+    onPlayNext,
+    onAddToQueue,
+    onGoToArtist
+}: UnifiedSearchProps) {
   const [query, setQuery] = useState('');
   const [onlineResults, setOnlineResults] = useState<SearchResult[]>([]);
   const [isSearchingOnline, setIsSearchingOnline] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, song: Song } | null>(null);
+
+  const handleContextMenu = (e: React.MouseEvent, result: SearchResult) => {
+      e.preventDefault();
+      const song: Song = {
+          path: result.soundcloudId ? `soundcloud://${result.soundcloudId}` : result.url,
+          title: result.title,
+          artist: result.artist,
+          album: result.soundcloudId ? 'SoundCloud' : 'Online Search',
+          duration: result.duration,
+          artwork: result.thumbnail,
+          isOnline: true,
+          streamUrl: result.streamUrl,
+          soundcloudId: result.soundcloudId,
+          permalink: result.url
+      };
+      setContextMenu({ x: e.clientX, y: e.clientY, song });
+  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,25 +143,49 @@ export function UnifiedSearch({ onPlayOnline, onToggleLike, isLiked }: UnifiedSe
                 <Globe className="text-[var(--accent)]" size={20} />
                 <h2 className="text-xl font-bold text-[var(--text-main)]">Online Results</h2>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <div className="grid grid-cols-[auto_1fr_auto_auto] gap-4 px-4 py-3 text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider border-b border-[var(--border)] mb-2">
+                  <div className="w-8 text-center">#</div>
+                  <div>Title</div>
+                  <div className="flex justify-end"><Clock size={14} /></div>
+                  <div className="w-8"></div>
+                </div>
+
                 {onlineResults.map((result, index) => (
                   <div 
                     key={index}
-                    className="group bg-[var(--bg-tertiary)] p-4 rounded-xl border border-[var(--border)] hover:border-[var(--accent)]/50 transition-all hover:shadow-lg hover:-translate-y-1 cursor-pointer relative overflow-hidden"
+                    className="group grid grid-cols-[auto_1fr_auto_auto] gap-4 px-4 py-3 rounded-xl items-center hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer border border-transparent hover:border-[var(--border)]"
                     onClick={() => handlePlayOnlineResult(result)}
+                    onContextMenu={(e) => handleContextMenu(e, result)}
                   >
-                    <div className="aspect-square rounded-lg overflow-hidden mb-4 bg-[var(--bg-secondary)] relative shadow-md">
-                      {result.thumbnail ? (
-                        <img src={result.thumbnail} alt={result.title} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[var(--text-secondary)]">
-                          <Globe size={40} />
-                        </div>
-                      )}
-                      
-                      {/* Like Button Overlay */}
-                      <button
-                        className={`absolute top-2 right-2 p-2 rounded-full bg-black/50 backdrop-blur-md transition-colors z-20 hover:bg-black/70 ${isLiked?.(result.soundcloudId ? `soundcloud://${result.soundcloudId}` : result.url) ? 'text-[var(--accent)]' : 'text-white'}`}
+                    <div className="w-8 text-center flex justify-center text-[var(--text-secondary)] font-mono text-sm">
+                      <span className="group-hover:hidden">{index + 1}</span>
+                      <Play size={16} className="hidden group-hover:block text-[var(--text-main)]" />
+                    </div>
+                    
+                    <div className="flex items-center gap-4 overflow-hidden">
+                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-[var(--bg-secondary)] flex-shrink-0">
+                        {result.thumbnail ? (
+                          <img src={result.thumbnail} alt={result.title} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-[var(--text-secondary)]">
+                            <Globe size={20} />
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-bold truncate text-sm text-[var(--text-main)]" title={result.title}>{result.title}</div>
+                        <div className="text-xs text-[var(--text-secondary)] truncate">{result.artist}</div>
+                      </div>
+                    </div>
+
+                    <div className="text-sm text-[var(--text-secondary)] font-mono text-right">
+                      {formatDuration(result.duration)}
+                    </div>
+                    
+                    <div className="flex justify-end items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        className={`p-2 rounded-lg transition-colors ${isLiked?.(result.soundcloudId ? `soundcloud://${result.soundcloudId}` : result.url) ? 'text-[var(--accent)] opacity-100' : 'text-[var(--text-secondary)] hover:text-[var(--text-main)] hover:bg-[var(--bg-main)]'}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           const song: Song = {
@@ -144,26 +202,19 @@ export function UnifiedSearch({ onPlayOnline, onToggleLike, isLiked }: UnifiedSe
                           };
                           onToggleLike?.(song);
                         }}
+                        title={isLiked?.(result.soundcloudId ? `soundcloud://${result.soundcloudId}` : result.url) ? "Unlike" : "Like"}
                       >
-                         <Heart size={18} fill={isLiked?.(result.soundcloudId ? `soundcloud://${result.soundcloudId}` : result.url) ? "currentColor" : "none"} />
+                        <Heart size={16} fill={isLiked?.(result.soundcloudId ? `soundcloud://${result.soundcloudId}` : result.url) ? "currentColor" : "none"} />
                       </button>
-
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
-                        <div className="bg-[var(--accent)] text-white p-3 rounded-full transform scale-90 group-hover:scale-100 transition-transform shadow-xl">
-                          <Play size={24} fill="currentColor" />
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <h3 className="font-bold text-[var(--text-main)] truncate mb-1" title={result.title}>{result.title}</h3>
-                      <p className="text-sm text-[var(--text-secondary)] truncate mb-2">{result.artist}</p>
-                      <div className="flex items-center justify-between text-xs text-[var(--text-secondary)] font-medium">
-                        <span className="bg-[var(--bg-secondary)] px-2 py-1 rounded-md border border-[var(--border)]">{formatDuration(result.duration)}</span>
-                        <span className="flex items-center gap-1 text-[var(--accent)]">
-                           SoundCloud
-                        </span>
-                      </div>
+                      
+                      <button
+                          className="p-2 hover:bg-[var(--bg-main)] rounded-lg transition-colors text-[var(--text-secondary)] hover:text-[var(--text-main)]"
+                          onClick={(e) => {
+                              handleContextMenu(e, result);
+                          }}
+                      >
+                          <MoreHorizontal size={16} />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -180,6 +231,26 @@ export function UnifiedSearch({ onPlayOnline, onToggleLike, isLiked }: UnifiedSe
           )}
         </div>
       </div>
+
+      {contextMenu && (
+        <SongContextMenu
+            song={contextMenu.song}
+            playlists={playlists}
+            onClose={() => setContextMenu(null)}
+            position={{ x: contextMenu.x, y: contextMenu.y }}
+            onAddToPlaylist={(id) => onAddToPlaylist(id, contextMenu.song)}
+            onPlayNext={() => onPlayNext?.(contextMenu.song)}
+            onAddToQueue={() => onAddToQueue?.(contextMenu.song)}
+            onGoToArtist={(artist) => {
+                 onGoToArtist?.(artist);
+                 setContextMenu(null);
+            }}
+            onDeleteSong={() => {
+                // Cannot delete online song from search result
+                setContextMenu(null);
+            }}
+        />
+      )}
     </div>
   );
 }

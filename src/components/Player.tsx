@@ -1,5 +1,5 @@
-import { Play, SkipBack, SkipForward, Repeat, Shuffle, Mic2, ListMusic, Volume2, Pause, VolumeX, Repeat1, Music } from 'lucide-react';
-import type { Song } from '../types';
+import { Play, SkipBack, SkipForward, Repeat, Shuffle, Mic2, ListMusic, Volume2, Pause, VolumeX, Repeat1, Music, Plus, ListPlus } from 'lucide-react';
+import type { Song, Playlist } from '../types';
 import { useRef, useEffect, useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -22,6 +22,8 @@ interface PlayerProps {
   onToggleRepeat: () => void;
   showQueue: boolean;
   onToggleQueue: () => void;
+  playlists: Playlist[];
+  onAddToPlaylist: (playlistId: string, song: Song | string) => void;
 }
 
 export function Player({ 
@@ -42,13 +44,16 @@ export function Player({
   repeatMode,
   onToggleRepeat,
   showQueue,
-  onToggleQueue
+  onToggleQueue,
+  playlists,
+  onAddToPlaylist
 }: PlayerProps) {
   
   const { t } = useLanguage();
   const volumeRef = useRef<HTMLDivElement>(null);
   const lastVolumeRef = useRef(1);
   const [isDraggingVolume, setIsDraggingVolume] = useState(false);
+  const [showPlaylistMenu, setShowPlaylistMenu] = useState(false);
 
   useEffect(() => {
     if (volume > 0) {
@@ -106,6 +111,54 @@ export function Player({
             <div className="overflow-hidden flex flex-col justify-center min-w-0">
                 <div className="text-[var(--text-main)] font-bold truncate hover:underline cursor-pointer text-lg tracking-tight">{currentSong.title || t.unknownTitle}</div>
                 <div className="text-[var(--text-secondary)] hover:underline cursor-pointer font-medium opacity-80 truncate text-sm">{currentSong.artist || t.unknownArtist}</div>
+            </div>
+            
+            <div className="relative">
+                <button
+                    onClick={() => setShowPlaylistMenu(!showPlaylistMenu)}
+                    className="p-2 rounded-full hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-main)] transition-all active:scale-95"
+                    title={t.addToPlaylist}
+                >
+                    <Plus size={20} />
+                </button>
+                
+                {showPlaylistMenu && (
+                    <>
+                        <div 
+                            className="fixed inset-0 z-[100]" 
+                            onClick={() => setShowPlaylistMenu(false)} 
+                        />
+                        <div className="absolute bottom-full left-0 mb-4 w-64 bg-[var(--bg-secondary)]/95 backdrop-blur-xl border border-[var(--border)] rounded-2xl shadow-2xl z-[101] overflow-hidden flex flex-col max-h-80 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                            <div className="px-4 py-3 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)] border-b border-[var(--border)] bg-[var(--bg-tertiary)]/30">
+                                {t.addToPlaylist}
+                            </div>
+                            <div className="overflow-y-auto custom-scrollbar flex-1 p-2">
+                                {playlists.length > 0 ? (
+                                    playlists.map(playlist => (
+                                        <button
+                                            key={playlist.id}
+                                            className="w-full text-left px-3 py-3 rounded-xl hover:bg-[var(--bg-tertiary)] text-sm font-medium transition-colors truncate flex items-center gap-3 group"
+                                            onClick={() => {
+                                                onAddToPlaylist(playlist.id, currentSong);
+                                                setShowPlaylistMenu(false);
+                                            }}
+                                        >
+                                            <div className="w-8 h-8 rounded-lg bg-[var(--bg-tertiary)] flex items-center justify-center text-[var(--text-secondary)] group-hover:bg-[var(--bg-main)] group-hover:text-[var(--accent)] transition-colors">
+                                                <ListPlus size={16} />
+                                            </div>
+                                            <span className="truncate">{playlist.name}</span>
+                                        </button>
+                                    ))
+                                ) : (
+                                    <div className="px-4 py-8 text-sm text-[var(--text-secondary)] italic text-center flex flex-col items-center gap-2">
+                                        <ListMusic size={24} className="opacity-50" />
+                                        {t.noPlaylistsCreated}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
           </>
         ) : (

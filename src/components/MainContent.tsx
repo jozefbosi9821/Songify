@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight, Music, Play, Clock, MoreHorizontal, Edit2, A
 import { useEffect, useState, useRef } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import type { Song, Playlist } from '../types';
+import { SongContextMenu } from './SongContextMenu';
 
 function formatTime(seconds: number) {
   const mins = Math.floor(seconds / 60);
@@ -59,6 +60,7 @@ export function MainContent({
 }: MainContentProps) {
   const { t } = useLanguage();
   const [activeMenuSongPath, setActiveMenuSongPath] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ song: Song, x: number, y: number } | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(title);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -145,13 +147,31 @@ export function MainContent({
   };
 
   useEffect(() => {
-    const handleClickOutside = () => setActiveMenuSongPath(null);
+    const handleClickOutside = () => {
+        setActiveMenuSongPath(null);
+        setContextMenu(null);
+    };
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
   return (
     <div className="flex-1 bg-[var(--bg-secondary)] rounded-3xl overflow-y-auto relative border border-[var(--border)] shadow-2xl">
+        {contextMenu && (
+            <SongContextMenu
+                song={contextMenu.song}
+                playlists={playlists}
+                onClose={() => setContextMenu(null)}
+                onPlayNext={onPlayNext}
+                onAddToQueue={onAddToQueue}
+                onGoToArtist={onGoToArtist}
+                onAddToPlaylist={onAddToPlaylist}
+                onRemoveFromPlaylist={onRemoveFromPlaylist}
+                onDeleteSong={onDeleteSong}
+                currentPlaylistId={currentPlaylistId}
+                position={{ x: contextMenu.x, y: contextMenu.y }}
+            />
+        )}
         <div className="sticky top-0 bg-[var(--bg-secondary)]/90 backdrop-blur-md px-8 py-6 flex items-center justify-between z-10 border-b border-[var(--border)]">
             <div className="flex items-center gap-4">
                 <div className="bg-[var(--bg-tertiary)]/70 rounded-full p-2 cursor-pointer hover:bg-[var(--bg-tertiary)] transition-all hover:scale-110 active:scale-95">
@@ -331,6 +351,10 @@ export function MainContent({
                             onDragStart={(e) => handleDragStart(e, index)}
                             onDragOver={handleDragOver}
                             onDrop={(e) => handleDrop(e, index)}
+                            onContextMenu={(e) => {
+                                e.preventDefault();
+                                setContextMenu({ song, x: e.clientX, y: e.clientY });
+                            }}
                             className={`group grid grid-cols-[auto_1fr_1fr_auto_auto] gap-4 px-4 py-3 rounded-xl items-center hover:bg-[var(--bg-tertiary)] transition-colors cursor-pointer border border-transparent hover:border-[var(--border)] ${isCurrentSong ? 'bg-[var(--bg-tertiary)] border-[var(--border)] shadow-sm' : ''} ${draggedIndex === index ? 'opacity-40 border-dashed border-[var(--accent)]' : ''}`}
                             onDoubleClick={() => onPlaySong?.(originalIndex)}
                         >

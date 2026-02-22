@@ -377,12 +377,11 @@ ipcMain.handle('soundcloud-search', async (_, query) => {
     let url = `https://api-v2.soundcloud.com/search/tracks?q=${encodeURIComponent(query)}&limit=50`;
     const headers: Record<string, string> = {};
 
+    let clientId = CONFIG.SOUNDCLOUD_CLIENT_ID || FALLBACK_PUBLIC_ID;
+
     if (token) {
         headers['Authorization'] = `OAuth ${token}`;
     } else {
-        // Fallback to Public Client ID if OAuth fails
-        // Use user's config ID first, but if it fails (likely), try known working ID
-        const clientId = CONFIG.SOUNDCLOUD_CLIENT_ID || FALLBACK_PUBLIC_ID;
         url += `&client_id=${clientId}`;
     }
 
@@ -390,11 +389,14 @@ ipcMain.handle('soundcloud-search', async (_, query) => {
         let response = await fetch(url, { headers });
 
         if (!response.ok && !token) {
-             // If user's client ID failed, try fallback public ID
-             // Only retry if they are different
-             if (CONFIG.SOUNDCLOUD_CLIENT_ID !== FALLBACK_PUBLIC_ID) {
-                 console.warn(`SoundCloud search failed with configured ID (${response.status}). Retrying with fallback ID...`);
-                 url = url.replace(`client_id=${CONFIG.SOUNDCLOUD_CLIENT_ID}`, `client_id=${FALLBACK_PUBLIC_ID}`);
+             console.warn(`SoundCloud search failed with ID ${clientId}. Trying scraped ID...`);
+             const scrapedId = await scrapeClientId();
+             if (scrapedId && scrapedId !== clientId) {
+                 url = url.replace(`client_id=${clientId}`, `client_id=${scrapedId}`);
+                 response = await fetch(url, { headers });
+             } else if (clientId !== FALLBACK_PUBLIC_ID) {
+                 // Try fallback if scraped failed or same as current
+                 url = url.replace(`client_id=${clientId}`, `client_id=${FALLBACK_PUBLIC_ID}`);
                  response = await fetch(url, { headers });
              }
         }
@@ -426,10 +428,34 @@ ipcMain.handle('soundcloud-artist-tracks', async (_, artistName) => {
         headers['Authorization'] = `OAuth ${token}`;
     }
 
+    let clientId = CONFIG.SOUNDCLOUD_CLIENT_ID || FALLBACK_PUBLIC_ID;
+
     try {
         // 1. Search for the user first
-        const userSearchUrl = `https://api-v2.soundcloud.com/search/users?q=${encodeURIComponent(artistName)}&limit=1`;
-        const userRes = await fetch(userSearchUrl, { headers });
+        let userSearchUrl = `https://api-v2.soundcloud.com/search/users?q=${encodeURIComponent(artistName)}&limit=1`;
+        
+        if (!token) {
+            userSearchUrl += `&client_id=${clientId}`;
+        }
+
+        let userRes = await fetch(userSearchUrl, { headers });
+        
+        // Retry with scraped ID if initial request fails
+        if (!userRes.ok && !token) {
+             console.warn(`SoundCloud user search failed with ID ${clientId}. Trying scraped ID...`);
+             const scrapedId = await scrapeClientId();
+             
+             if (scrapedId && scrapedId !== clientId) {
+                 userSearchUrl = userSearchUrl.replace(`client_id=${clientId}`, `client_id=${scrapedId}`);
+                 userRes = await fetch(userSearchUrl, { headers });
+                 if (userRes.ok) clientId = scrapedId;
+             } else if (clientId !== FALLBACK_PUBLIC_ID) {
+                 // Try fallback if scraped failed or same as current
+                 userSearchUrl = userSearchUrl.replace(`client_id=${clientId}`, `client_id=${FALLBACK_PUBLIC_ID}`);
+                 userRes = await fetch(userSearchUrl, { headers });
+                 if (userRes.ok) clientId = FALLBACK_PUBLIC_ID;
+             }
+        }
         
         if (!userRes.ok) return [];
         
@@ -439,9 +465,22 @@ ipcMain.handle('soundcloud-artist-tracks', async (_, artistName) => {
         if (!user) return [];
 
         // 2. Get user's tracks
-        // Use a higher limit to get a good collection
-        const tracksUrl = `https://api-v2.soundcloud.com/users/${user.id}/tracks?limit=50`;
-        const tracksRes = await fetch(tracksUrl, { headers });
+        let tracksUrl = `https://api-v2.soundcloud.com/users/${user.id}/tracks?limit=50`;
+        
+        if (!token) {
+             tracksUrl += `&client_id=${clientId}`;
+        }
+
+        let tracksRes = await fetch(tracksUrl, { headers });
+        
+        // Retry logic for tracks (if somehow the ID expired between calls or was bad for tracks)
+        if (!tracksRes.ok && !token) {
+             const scrapedId = await scrapeClientId();
+             if (scrapedId && scrapedId !== clientId) {
+                 tracksUrl = tracksUrl.replace(`client_id=${clientId}`, `client_id=${scrapedId}`);
+                 tracksRes = await fetch(tracksUrl, { headers });
+             }
+        }
         
         if (!tracksRes.ok) return [];
         

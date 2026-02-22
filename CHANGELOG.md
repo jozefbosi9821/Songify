@@ -1,17 +1,18 @@
 # Changelog
 
-## [1.2.0] - 2026-02-21
+## [1.2.2] - 2026-02-22
 
 ### Added
-- **User Profile Menu**: Account settings are now accessible via the profile button in the top-right corner.
-- **Liked Songs**: A dedicated "Liked Songs" playlist is automatically created.
-- **Heart Button**: Added a heart button to songs in the library and online search results to easily add them to "Liked Songs".
+- **Search Layout**: Redesigned online search results to use a clean list layout (similar to Spotify) instead of grid cards, including columns for duration and actions.
+- **Player Enhancements**: Added a "+" button in the player controls to quickly add the currently playing song to any playlist.
+- **Context Menu**: Added full right-click context menu support to online search results and ensured "Add to Playlist" is available everywhere.
+- **My Music**: "My Music" now aggregates all songs from your playlists into a single view.
+- **Artist Playback**: Playing a song from an artist's page now queues all local songs by that artist.
 
 ### Changed
-- **Navigation**: Moved account settings out of the main Settings page.
-- **Search**: "Online Search" is now exclusively for SoundCloud results, while local search is restricted to My Music and Playlists.
-- **Library Management**: Online songs are no longer automatically added to the main "My Music" library when played.
+- **UI Consistency**: Unified the look and feel of song lists across Library, Playlists, and Search.
 
 ### Fixed
-- **Search Results**: Local search now correctly filters songs from My Music and Playlists.
-- **Heart Button**: Fixed an issue where the heart button would not update its state after adding a song to "Liked Songs".
+- **Navigation**: Fixed an issue where going back from an artist page would incorrectly redirect to Search.
+- **Types**: Fixed a runtime error caused by incorrect type imports.
+- **Online Search**: Fixed issues with online artist search and general search by adding robust client ID fallback mechanisms.

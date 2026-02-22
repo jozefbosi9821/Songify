@@ -9,7 +9,7 @@ interface ArtistPageProps {
   artistName: string;
   localSongs: Song[];
   onBack: () => void;
-  onPlayLocal: (song: Song) => void;
+  onPlayLocal: (song: Song, contextSongs?: Song[]) => void;
   onPlayOnline: (song: Song) => void;
 }
 
@@ -124,7 +124,7 @@ export function ArtistPage({ artistName, localSongs, onBack, onPlayLocal, onPlay
                 <div 
                   key={song.path}
                   className="flex items-center justify-between p-3 rounded-xl hover:bg-[var(--bg-tertiary)] group transition cursor-pointer border border-transparent hover:border-[var(--border)]"
-                  onClick={() => onPlayLocal(song)}
+                  onClick={() => onPlayLocal(song, artistLocalSongs)}
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-[var(--bg-tertiary)] rounded-lg flex items-center justify-center text-[var(--text-secondary)] group-hover:text-[var(--text-main)] relative overflow-hidden shadow-sm">
