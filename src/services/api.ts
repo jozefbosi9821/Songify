@@ -101,6 +101,17 @@ export const api = {
         return await response.json();
     },
 
+    async getGlobalStats() {
+        try {
+            const response = await fetch(`${API_URL}/api/stats/global`);
+            if (!response.ok) return null;
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to fetch global stats:', error);
+            return null;
+        }
+    },
+
     async changePassword(password: string, newPassword: string) {
         const token = localStorage.getItem('token');
         if (!token) throw new Error('Not authenticated');

@@ -18,7 +18,10 @@ import { User, Settings as SettingsIcon } from 'lucide-react';
 import { ConfirmationModal } from './components/ConfirmationModal';
 import { AuthModal } from './components/AuthModal';
 import { ChangelogModal } from './components/ChangelogModal';
+import { UpdateModal } from './components/UpdateModal';
 import { UserMenu } from './components/UserMenu';
+import { UserProfile } from './components/UserProfile';
+import { TitleBar } from './components/TitleBar';
 import { api } from './services/api';
 
 function App() {
@@ -31,7 +34,7 @@ function App() {
 
 function AppContent() {
   const { t } = useLanguage();
-  const [currentView, setCurrentView] = useState<'home' | 'search' | 'settings' | 'playlist' | 'library' | 'artist'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'search' | 'settings' | 'playlist' | 'library' | 'artist' | 'profile'>('home');
   const [currentPlaylistId, setCurrentPlaylistId] = useState<string | null>(null);
   const [selectedArtist, setSelectedArtist] = useState<string | null>(null);
   const [songs, setSongs] = useState<Song[]>([]);
@@ -84,6 +87,7 @@ function AppContent() {
   const [songToDelete, setSongToDelete] = useState<string | null>(null);
   
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [profileTab, setProfileTab] = useState<'personal' | 'global' | 'settings'>('personal');
 
   const LIKED_SONGS_PLAYLIST_ID = 'liked-songs';
 
@@ -138,6 +142,39 @@ function AppContent() {
   
   const [changelogOpen, setChangelogOpen] = useState(false);
   const [changelogContent, setChangelogContent] = useState('');
+
+  const [updateModalOpen, setUpdateModalOpen] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<{ version: string; releaseNotes?: string } | null>(null);
+
+  // Listen for update downloaded event
+  useEffect(() => {
+    const cleanup = platform.onUpdateMessage((_event, { text, data }) => {
+      if (text === 'Update downloaded') {
+        setUpdateInfo({ 
+          version: data.version, 
+          releaseNotes: data.releaseNotes 
+        });
+        setUpdateModalOpen(true);
+      }
+    });
+
+    // Dev Shortcut to test Update Modal: Ctrl + Alt + U
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.altKey && e.key === 'u') {
+        setUpdateInfo({
+          version: '1.4.0',
+          releaseNotes: '### New Features\n- Added custom window controls\n- Improved update UI\n- Fixed bugs\n\n### Fixes\n- Performance improvements'
+        });
+        setUpdateModalOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      cleanup();
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   // Check version and show changelog
   useEffect(() => {
@@ -1008,7 +1045,7 @@ function AppContent() {
       }));
   };
 
-  const handleNavigate = (view: 'home' | 'search' | 'settings' | 'playlist' | 'library' | 'artist', playlistId?: string) => {
+  const handleNavigate = (view: 'home' | 'search' | 'settings' | 'playlist' | 'library' | 'artist' | 'profile', playlistId?: string) => {
     setCurrentView(view);
     if (view === 'playlist' && playlistId) {
       setCurrentPlaylistId(playlistId);
@@ -1221,8 +1258,7 @@ function AppContent() {
 
   return (
     <div className={`h-screen flex flex-col overflow-hidden transition-colors duration-300 ${theme}`} style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-main)' }}>
-      {/* Custom Title Bar Drag Region */}
-      <div className="h-8 w-full fixed top-0 left-0 z-[100] drag-region" />
+      <TitleBar />
       
       <div className="flex-1 flex overflow-hidden p-4 gap-4 relative">
         {/* Sidebar */}
@@ -1275,6 +1311,10 @@ function AppContent() {
             onLogout={handleLogout}
             isOpen={userMenuOpen}
             onClose={handleCloseUserMenu}
+            onShowProfile={(tab) => {
+                if (tab) setProfileTab(tab);
+                handleNavigate('profile');
+            }}
         />
 
         {showLyrics ? (
@@ -1291,6 +1331,8 @@ function AppContent() {
             autoplayEnabled={autoplayEnabled}
             onAutoplayChange={setAutoplayEnabled}
           />
+        ) : currentView === 'profile' ? (
+            <UserProfile initialTab={profileTab} />
         ) : currentView === 'search' ? (
           <UnifiedSearch 
             onPlayOnline={handlePlayOnline}
@@ -1426,6 +1468,14 @@ function AppContent() {
         isOpen={changelogOpen}
         onClose={() => setChangelogOpen(false)}
         changelog={changelogContent}
+      />
+
+      <UpdateModal
+        isOpen={updateModalOpen}
+        onClose={() => setUpdateModalOpen(false)}
+        onInstall={() => platform.quitAndInstall()}
+        version={updateInfo?.version || 'Unknown'}
+        releaseNotes={updateInfo?.releaseNotes}
       />
       </div>
   );

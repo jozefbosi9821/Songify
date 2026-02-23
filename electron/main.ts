@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, protocol, net, shell, session } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, protocol, net, shell, session, Menu, MenuItem } from 'electron';
 import path from 'path';
 import { pathToFileURL } from 'url';
 import { parseFile } from 'music-metadata';
@@ -54,20 +54,7 @@ autoUpdater.on('download-progress', (progressObj) => {
 autoUpdater.on('update-downloaded', (info) => {
   sendStatusToWindow('Update downloaded', info);
   
-  // Ask user to install now or later
-  dialog.showMessageBox({
-    type: 'info',
-    title: 'Update Ready',
-    message: 'A new version of Songify is ready to install.',
-    detail: 'Do you want to install it now? If you choose "Later", it will be installed when you exit the app.',
-    buttons: ['Install Now', 'Later'],
-    defaultId: 0,
-    cancelId: 1
-  }).then((result) => {
-    if (result.response === 0) {
-      autoUpdater.quitAndInstall();
-    }
-  });
+  // The frontend will handle the UI and trigger the installation
 });
 
 // IPC Handlers for Auto Update
@@ -761,14 +748,41 @@ function createWindow() {
       webSecurity: true // Keep true for security, use custom protocol
     },
     autoHideMenuBar: true,
+    frame: false, // Custom window frame
     titleBarStyle: 'hidden',
-    titleBarOverlay: {
-        color: '#000000', // Matches default theme background
-        symbolColor: '#ffffff',
-        height: 32
-    },
     icon: path.join(__dirname, '../src/assets/Songify.png')
   });
+
+  // Create Application Menu with Zoom controls
+  const template = [
+    {
+      label: 'View',
+      submenu: [
+        { role: 'reload' },
+        { role: 'forceReload' },
+        { role: 'toggleDevTools' },
+        { type: 'separator' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn', accelerator: 'CommandOrControl+=' },
+        { label: 'Zoom In Secondary', accelerator: 'CommandOrControl+Shift+=', click: (item: MenuItem, focusedWindow: BrowserWindow | undefined) => { if (focusedWindow) focusedWindow.webContents.setZoomLevel(focusedWindow.webContents.getZoomLevel() + 0.5); } },
+        { role: 'zoomOut', accelerator: 'CommandOrControl+-' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' }
+      ]
+    },
+    {
+      label: 'Window',
+      submenu: [
+        { role: 'minimize' },
+        { role: 'zoom' },
+        { role: 'close' }
+      ]
+    }
+  ];
+
+  // @ts-ignore
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
 
   mainWindow.once('ready-to-show', () => {
     if (mainWindow) {
@@ -776,7 +790,24 @@ function createWindow() {
     }
   });
 
-  // Intercept requests to SoundCloud and MP3.pm domains to add Referer/Origin headers
+  // Window Controls IPC
+ipcMain.handle('window-minimize', () => {
+  mainWindow?.minimize();
+});
+
+ipcMain.handle('window-maximize', () => {
+  if (mainWindow?.isMaximized()) {
+    mainWindow.unmaximize();
+  } else {
+    mainWindow?.maximize();
+  }
+});
+
+ipcMain.handle('window-close', () => {
+  mainWindow?.close();
+});
+
+// Intercept requests to SoundCloud and MP3.pm domains to add Referer/Origin headers
   session.defaultSession.webRequest.onBeforeSendHeaders(
     { urls: [
       '*://*.soundcloud.com/*', 

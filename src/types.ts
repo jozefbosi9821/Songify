@@ -53,6 +53,11 @@ export interface ElectronAPI {
   quitAndInstall: () => Promise<void>;
   onUpdateMessage: (callback: (event: any, data: any) => void) => () => void;
   getChangelog: () => Promise<string>;
+
+  // Window Controls
+  minimize: () => Promise<void>;
+  maximize: () => Promise<void>;
+  close: () => Promise<void>;
 }
 
 

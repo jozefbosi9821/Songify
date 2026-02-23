@@ -222,6 +222,24 @@ class PlatformService {
         }
         return '# Changelog\n\nChangelog not available on this platform.';
     }
+
+    async minimize(): Promise<void> {
+        if (isElectron()) {
+            return window.electron.minimize();
+        }
+    }
+
+    async maximize(): Promise<void> {
+        if (isElectron()) {
+            return window.electron.maximize();
+        }
+    }
+
+    async close(): Promise<void> {
+        if (isElectron()) {
+            return window.electron.close();
+        }
+    }
 }
 
 export const platform = new PlatformService();

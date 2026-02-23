@@ -4,8 +4,8 @@ import songifyLogo from '../assets/Songify.png';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface SidebarProps {
-  onNavigate?: (view: 'home' | 'search' | 'settings' | 'playlist' | 'library' | 'artist', playlistId?: string) => void;
-  currentView?: 'home' | 'search' | 'settings' | 'playlist' | 'library' | 'artist';
+  onNavigate?: (view: 'home' | 'search' | 'settings' | 'playlist' | 'library' | 'artist' | 'profile', playlistId?: string) => void;
+  currentView?: 'home' | 'search' | 'settings' | 'playlist' | 'library' | 'artist' | 'profile';
   playlists?: Playlist[];
   onCreatePlaylist?: () => void;
   onDeletePlaylist?: (id: string) => void;
