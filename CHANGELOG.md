@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.3.4] - 2026-03-26
+
+### Fixed
+- **Account System**: A bug where u had to relogin everytime you opened the app.
+- **Stats Leaderboard**: Fixed an issue where the Stats Leaderboard wasnt loading at all
+
 ## [1.3.3] - 2026-03-26
 
 ### Fixed

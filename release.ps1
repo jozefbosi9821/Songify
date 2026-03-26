@@ -71,6 +71,39 @@ if ($doGit) {
 }
 
 # ─────────────────────────────────────────
+# BACKEND VPS CHANGELOG SYNC (API)
+# ─────────────────────────────────────────
+Write-Host ""
+Write-Host "Syncing backend changelog via VPS API..."
+
+# Must match your VPS backend and admin auth.
+$backendUrl = "http://212.227.64.179:12268"
+$adminPassword = $env:BACKEND_ADMIN_PASSWORD
+
+if ([string]::IsNullOrWhiteSpace($adminPassword)) {
+    $adminPassword = Read-Host "Enter backend dashboard admin password (BACKEND_ADMIN_PASSWORD not set)"
+}
+
+try {
+    $rootChangelog = Get-Content "CHANGELOG.md" -Raw
+
+    # 1) Auth (dashboard token)
+    $authPayload = @{ password = $adminPassword } | ConvertTo-Json -Depth 5
+    $authResp = Invoke-RestMethod -Uri "$backendUrl/dashboard/api/auth" -Method Post -Body $authPayload -ContentType "application/json"
+    $token = $authResp.token
+
+    if ([string]::IsNullOrWhiteSpace($token)) { throw "No token returned from dashboard auth." }
+
+    # 2) Push changelog to VPS
+    $syncPayload = @{ content = $rootChangelog } | ConvertTo-Json -Depth 5
+    Invoke-RestMethod -Uri "$backendUrl/dashboard/api/changelog" -Method Post -Headers @{ Authorization = "Bearer $token" } -Body $syncPayload -ContentType "application/json" | Out-Null
+
+    Write-Host "Backend changelog synced successfully!"
+} catch {
+    Write-Warning "Failed to sync backend changelog via API: $_"
+}
+
+# ─────────────────────────────────────────
 # WEBHOOK STEPS
 # ─────────────────────────────────────────
 if ($doWebhook) {
