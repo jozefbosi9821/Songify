@@ -24,20 +24,28 @@ export const UserMenu = React.memo(function UserMenu({ username, onLogin, onLogo
   const menuRef = useRef<HTMLDivElement>(null);
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
+  const justOpenedRef = useRef(false);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      // Prevent the first document click after opening from immediately closing the menu.
+      if (justOpenedRef.current) {
+        justOpenedRef.current = false;
+        return;
+      }
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         onClose();
       }
     }
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      justOpenedRef.current = true;
+      // Use `click` (not `mousedown`) so button `onClick` handlers run first.
+      document.addEventListener('click', handleClickOutside);
       if (username) {
         fetchStats();
       }
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
   }, [isOpen, onClose, username]);
 
   const fetchStats = async () => {

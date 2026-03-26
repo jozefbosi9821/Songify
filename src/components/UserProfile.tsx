@@ -30,6 +30,8 @@ export function UserProfile({ initialTab = 'personal' }: UserProfileProps) {
     const [activeTab, setActiveTab] = useState<'personal' | 'global' | 'settings'>(initialTab);
     const [loading, setLoading] = useState(true);
     const username = localStorage.getItem('username');
+    const token = localStorage.getItem('token');
+    const [loadError, setLoadError] = useState<string | null>(null);
 
     // Settings state
     const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
@@ -49,6 +51,7 @@ export function UserProfile({ initialTab = 'personal' }: UserProfileProps) {
 
     async function loadData() {
         setLoading(true);
+        setLoadError(null);
         try {
             const [personal, global] = await Promise.all([
                 api.getStats(),
@@ -58,6 +61,7 @@ export function UserProfile({ initialTab = 'personal' }: UserProfileProps) {
             setGlobalStats(global);
         } catch (error) {
             console.error('Failed to load profile data', error);
+            setLoadError((error as any)?.message || 'Could not load profile stats right now.');
         } finally {
             setLoading(false);
         }
@@ -121,7 +125,21 @@ export function UserProfile({ initialTab = 'personal' }: UserProfileProps) {
         );
     }
 
-    if (!stats) return <div className="p-8 text-center text-gray-500">Failed to load profile.</div>;
+    if (!stats) {
+        if (!token) {
+            return (
+                <div className="p-8 text-center text-gray-500">
+                    Please sign in again to load your stats.
+                </div>
+            );
+        }
+
+        return (
+            <div className="p-8 text-center text-gray-500">
+                {loadError || 'Could not load profile stats right now.'}
+            </div>
+        );
+    }
 
     const formatTime = (seconds: number) => {
         const hours = Math.floor(seconds / 3600);

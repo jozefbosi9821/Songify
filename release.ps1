@@ -118,7 +118,7 @@ if ($doWebhook) {
     $webhookUrl = "https://discord.com/api/webhooks/1486835568724676609/W7ZEA9HyIrqJZbKDy7EIRDOEcixxOIXhBDud-TCpsf_gy5FBtOv32Ivj5TZdwHL_RtYT"
 
     $payload = @{
-        content    = "<@&1475504263307198686>"
+        content    = "<@&1440342652892741768>"
         embeds     = @(
             @{
                 title       = "🎵 Songify Update"

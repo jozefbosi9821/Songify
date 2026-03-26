@@ -89,7 +89,7 @@ export const api = {
 
     async getStats() {
         const token = localStorage.getItem('token');
-        if (!token) return null;
+        if (!token) throw new Error('Not authenticated');
 
         const response = await fetch(`${API_URL}/api/me/stats`, {
             headers: { 
@@ -97,7 +97,26 @@ export const api = {
             }
         });
 
-        if (!response.ok) return null;
+        if (!response.ok) {
+            let body: any = null;
+            try {
+                body = await response.json();
+            } catch {
+                // Ignore JSON parse errors; we'll fall back to status text.
+            }
+
+            const serverError =
+                (body && (body.error || body.message)) ||
+                (typeof body === 'string' ? body : null) ||
+                response.statusText ||
+                'Request failed';
+
+            const status = response.status;
+            const isAuthError = status === 401 || status === 403;
+
+            throw new Error(isAuthError ? 'Please sign in again to load stats.' : `Stats request failed: ${serverError}`);
+        }
+
         return await response.json();
     },
 

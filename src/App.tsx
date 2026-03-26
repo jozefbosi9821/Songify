@@ -1084,6 +1084,11 @@ function AppContent() {
     let songPath: string;
     if (typeof songOrPath === 'string') {
         songPath = songOrPath;
+        // If the caller provided only a path, still mark the matching song as part of the library.
+        // This keeps "My Music" (all playlist songs) consistent even for online songs.
+        setSongs(prev =>
+          prev.map(s => (s.path === songPath ? { ...s, inLibrary: true } : s))
+        );
     } else {
         songPath = songOrPath.path;
         // Ensure song is in library (marked as inLibrary: true since added to playlist)
@@ -1224,7 +1229,8 @@ function AppContent() {
     // If no playlists exist, we show all library songs to ensure the app isn't empty for new users.
     if (playlists.length > 0) {
         const allPlaylistSongs = new Set(playlists.flatMap(p => p.songs));
-        return songs.filter(s => allPlaylistSongs.has(s.path) && s.inLibrary !== false);
+        // "My Music" should be every song present in any playlist, regardless of inLibrary flag.
+        return songs.filter(s => allPlaylistSongs.has(s.path));
     }
 
     // Default: Show all songs in library
