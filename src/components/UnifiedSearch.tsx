@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Search, Loader2, Play, Globe, Heart, Clock, MoreHorizontal } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Play, Globe, Heart, Clock, MoreHorizontal } from 'lucide-react';
 import type { Song, Playlist } from '../types';
 import { soundcloud } from '../services/soundcloud';
 import { SongContextMenu } from './SongContextMenu';
@@ -25,6 +25,7 @@ interface UnifiedSearchProps {
   onPlayNext?: (song: Song | string) => void;
   onAddToQueue?: (song: Song | string) => void;
   onGoToArtist?: (artist: string) => void;
+  searchQuery?: string;
 }
 
 export function UnifiedSearch({ 
@@ -36,7 +37,8 @@ export function UnifiedSearch({
     onAddToPlaylist,
     onPlayNext,
     onAddToQueue,
-    onGoToArtist
+    onGoToArtist,
+    searchQuery
 }: UnifiedSearchProps) {
   const [query, setQuery] = useState('');
   const [onlineResults, setOnlineResults] = useState<SearchResult[]>([]);
@@ -60,13 +62,11 @@ export function UnifiedSearch({
       setContextMenu({ x: e.clientX, y: e.clientY, song });
   };
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
-
+  const performSearch = async (term: string) => {
+    if (!term.trim()) return;
     setIsSearchingOnline(true);
     try {
-        const results = await soundcloud.search(query);
+        const results = await soundcloud.search(term);
         const formattedResults: SearchResult[] = results.map(track => {
             const bestStreamUrl = soundcloud.getBestTranscodingUrl(track);
             return {
@@ -88,6 +88,15 @@ export function UnifiedSearch({
         setIsSearchingOnline(false);
     }
   };
+
+  useEffect(() => {
+    if (searchQuery !== undefined && searchQuery !== query) {
+      setQuery(searchQuery);
+      if (searchQuery.trim()) {
+        performSearch(searchQuery);
+      }
+    }
+  }, [searchQuery]);
 
   const handlePlayOnlineResult = (result: SearchResult) => {
       const song: Song = {
@@ -115,26 +124,6 @@ export function UnifiedSearch({
     <div className="flex-1 bg-[var(--bg-secondary)] rounded-3xl overflow-y-auto relative border border-[var(--border)] shadow-2xl p-8 custom-scrollbar">
       <div className="mb-8">
         <h1 className="text-4xl font-black mb-8 text-[var(--text-main)] tracking-tight">Online Search</h1>
-        <form onSubmit={handleSearch} className="flex gap-4 max-w-3xl mb-10 relative z-10">
-          <div className="flex-1 relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] group-focus-within:text-[var(--accent)] transition-colors" size={20} />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search SoundCloud..."
-              className="w-full bg-[var(--bg-tertiary)] border border-[var(--border)] rounded-2xl py-4 pl-12 pr-4 text-lg text-[var(--text-main)] placeholder-[var(--text-secondary)] focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] transition-all shadow-sm"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={isSearchingOnline}
-            className="bg-[var(--accent)] text-white px-8 py-4 rounded-2xl font-bold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[var(--accent)]/20 flex items-center gap-2"
-          >
-            {isSearchingOnline ? <Loader2 className="animate-spin" /> : <Search />}
-            Search
-          </button>
-        </form>
 
         <div className="space-y-4">
           {onlineResults.length > 0 && (

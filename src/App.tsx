@@ -13,7 +13,6 @@ import type { Song, Playlist } from './types';
 import { useLanguage, LanguageProvider } from './contexts/LanguageContext';
 import { platform } from './services/platform';
 import { soundcloud } from './services/soundcloud';
-import { User, Settings as SettingsIcon } from 'lucide-react';
 
 import { ConfirmationModal } from './components/ConfirmationModal';
 import { AuthModal } from './components/AuthModal';
@@ -88,6 +87,7 @@ function AppContent() {
   
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [profileTab, setProfileTab] = useState<'personal' | 'global' | 'settings'>('personal');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const LIKED_SONGS_PLAYLIST_ID = 'liked-songs';
 
@@ -1258,7 +1258,18 @@ function AppContent() {
 
   return (
     <div className={`h-screen flex flex-col overflow-hidden transition-colors duration-300 ${theme}`} style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-main)' }}>
-      <TitleBar />
+      <TitleBar
+        searchQuery={searchQuery}
+        onChangeSearch={setSearchQuery}
+        onSearchSubmit={() => {
+          if (!searchQuery.trim()) return;
+          setCurrentView('search');
+        }}
+        onSearchFocus={() => setCurrentView('search')}
+        username={username}
+        onOpenSettings={() => handleNavigate('settings')}
+        onOpenUserMenu={() => setUserMenuOpen(true)}
+      />
       
       <div className="flex-1 flex overflow-hidden p-4 gap-4 relative">
         {/* Sidebar */}
@@ -1277,34 +1288,6 @@ function AppContent() {
         </div>
 
         <div className="flex-1 min-w-0 flex flex-col overflow-hidden h-full relative">
-        {/* User Profile Button */}
-        <div className="absolute top-6 right-8 z-[101] flex items-center gap-3 p-1.5 bg-[var(--bg-main)]/30 backdrop-blur-xl rounded-full border border-[var(--border)] shadow-lg transition-all hover:bg-[var(--bg-main)]/50">
-           {/* Settings Button */}
-           <button 
-               onClick={() => handleNavigate('settings')}
-               className="p-2 bg-transparent hover:bg-[var(--bg-tertiary)] rounded-full transition-colors text-[var(--text-secondary)] hover:text-[var(--text-main)]"
-               title={t.settings}
-           >
-               <SettingsIcon size={20} />
-           </button>
-
-           <div className="h-6 w-[1px] bg-[var(--border)]" />
-
-           <div className="relative">
-               <button 
-                   onClick={() => setUserMenuOpen(true)}
-                   className={`flex items-center gap-3 px-2 rounded-full transition-all text-sm font-medium ${username ? 'text-[var(--text-main)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'}`}
-               >
-                   <div className={`w-8 h-8 rounded-full flex items-center justify-center ${username ? 'bg-[var(--accent)] text-white shadow-md' : 'bg-[var(--bg-tertiary)]'}`}>
-                      <User size={16} />
-                   </div>
-                   <span className="max-w-[100px] truncate pr-2">
-                       {username || 'Sign In'}
-                   </span>
-               </button>
-           </div>
-        </div>
-
         <UserMenu 
             username={username}
             onLogin={handleOpenAuth}
@@ -1344,6 +1327,7 @@ function AppContent() {
             onPlayNext={handlePlayNext}
             onAddToQueue={handleAddToQueue}
             onGoToArtist={handleGoToArtist}
+            searchQuery={searchQuery}
           />
         ) : currentView === 'artist' && selectedArtist ? (
           <ArtistPage 

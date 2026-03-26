@@ -1,4 +1,4 @@
-import { Home, Search, Library, Plus, Settings, List, Trash2, Heart } from 'lucide-react';
+import { Home, Library, Plus, List, Trash2, Heart } from 'lucide-react';
 import type { Playlist } from '../types';
 import songifyLogo from '../assets/Songify.png';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -34,25 +34,11 @@ export function Sidebar({ onNavigate, currentView, playlists = [], onCreatePlayl
           <span className="text-base tracking-wide">{t.home}</span>
         </div>
         <div 
-          className={`group flex items-center gap-4 cursor-pointer transition-all duration-300 px-4 py-3.5 rounded-2xl font-bold ${currentView === 'search' || currentView === 'artist' ? 'bg-[var(--accent)] text-[var(--bg-main)] shadow-xl shadow-[var(--accent)]/30 scale-[1.02]' : 'text-[var(--text-secondary)] hover:text-[var(--text-main)] hover:bg-[var(--bg-tertiary)] hover:scale-[1.02]'}`}
-          onClick={() => onNavigate?.('search')}
-        >
-          <Search size={22} className={`transition-transform duration-300 ${currentView === 'search' || currentView === 'artist' ? 'scale-110' : 'group-hover:scale-110'}`} />
-          <span className="text-base tracking-wide">{t.search}</span>
-        </div>
-        <div 
           className={`group flex items-center gap-4 cursor-pointer transition-all duration-300 px-4 py-3.5 rounded-2xl font-bold ${currentView === 'library' ? 'bg-[var(--accent)] text-[var(--bg-main)] shadow-xl shadow-[var(--accent)]/30 scale-[1.02]' : 'text-[var(--text-secondary)] hover:text-[var(--text-main)] hover:bg-[var(--bg-tertiary)] hover:scale-[1.02]'}`}
           onClick={() => onNavigate?.('library')}
         >
           <Library size={22} className={`transition-transform duration-300 ${currentView === 'library' ? 'scale-110' : 'group-hover:scale-110'}`} />
           <span className="text-base tracking-wide">{t.myMusic || t.library}</span>
-        </div>
-        <div 
-          className={`group flex items-center gap-4 cursor-pointer transition-all duration-300 px-4 py-3.5 rounded-2xl font-bold ${currentView === 'settings' ? 'bg-[var(--accent)] text-[var(--bg-main)] shadow-xl shadow-[var(--accent)]/30 scale-[1.02]' : 'text-[var(--text-secondary)] hover:text-[var(--text-main)] hover:bg-[var(--bg-tertiary)] hover:scale-[1.02]'}`}
-          onClick={() => onNavigate?.('settings')}
-        >
-          <Settings size={22} className={`transition-transform duration-300 ${currentView === 'settings' ? 'scale-110' : 'group-hover:scale-110'}`} />
-          <span className="text-base tracking-wide">{t.settings}</span>
         </div>
       </div>
 

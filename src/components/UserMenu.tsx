@@ -55,8 +55,11 @@ export const UserMenu = React.memo(function UserMenu({ username, onLogin, onLogo
   if (!isOpen) return null;
 
   return (
-    <div className="absolute top-16 right-8 z-50 animate-in fade-in zoom-in-95 duration-200">
-      <div ref={menuRef} className="bg-black/80 border border-white/10 rounded-2xl shadow-2xl p-0 w-96 backdrop-blur-2xl max-h-[80vh] overflow-y-auto custom-scrollbar overflow-hidden">
+    <div className="fixed z-50 inset-0 flex items-start justify-end pointer-events-none">
+      <div 
+        ref={menuRef} 
+        className="mt-16 mr-4 bg-black/80 border border-white/10 rounded-2xl shadow-2xl p-0 w-full sm:w-96 backdrop-blur-2xl max-h-[80vh] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-200 pointer-events-auto"
+      >
         {/* Header */}
         <div className="p-6 border-b border-white/5 flex items-center justify-between bg-gradient-to-b from-white/5 to-transparent">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
