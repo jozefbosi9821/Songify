@@ -16,6 +16,6 @@ export const CONFIG = {
 
     // Backend
     BACKEND: {
-        URL: 'http://212.227.64.179:12268', // Change this to your VPS IP/Domain
+        URL: 'http://93.115.101.103:12268', // Change this to your VPS IP/Domain
     }
 };

@@ -31,6 +31,7 @@ export interface ElectronAPI {
   loadLibrary: () => Promise<{ songs: Song[], playlists: Playlist[] }>;
   searchOnline: (query: string) => Promise<{ title: string; artist: string; duration: number; thumbnail: string; url: string; }[]>;
   downloadSong: (url: string) => Promise<{ success: boolean; path?: string; error?: string }>;
+  downloadSoundCloudTrack: (trackId: number, title: string, artist: string) => Promise<{ success: boolean; path?: string; error?: string }>;
   getSong: (filePath: string) => Promise<Song>;
   deleteSong: (filePath: string) => Promise<boolean>;
   showInFolder: (filePath: string) => Promise<void>;

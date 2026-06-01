@@ -1,11 +1,11 @@
-import { Home, Library, Plus, List, Trash2, Heart } from 'lucide-react';
+import { Home, Library, Plus, List, Trash2, Heart, HardDrive } from 'lucide-react';
 import type { Playlist } from '../types';
 import songifyLogo from '../assets/Songify.png';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface SidebarProps {
-  onNavigate?: (view: 'home' | 'search' | 'settings' | 'playlist' | 'library' | 'artist' | 'profile', playlistId?: string) => void;
-  currentView?: 'home' | 'search' | 'settings' | 'playlist' | 'library' | 'artist' | 'profile';
+  onNavigate?: (view: 'home' | 'search' | 'settings' | 'playlist' | 'library' | 'artist' | 'profile' | 'downloaded', playlistId?: string) => void;
+  currentView?: 'home' | 'search' | 'settings' | 'playlist' | 'library' | 'artist' | 'profile' | 'downloaded';
   playlists?: Playlist[];
   onCreatePlaylist?: () => void;
   onDeletePlaylist?: (id: string) => void;
@@ -39,6 +39,13 @@ export function Sidebar({ onNavigate, currentView, playlists = [], onCreatePlayl
         >
           <Library size={22} className={`transition-transform duration-300 ${currentView === 'library' ? 'scale-110' : 'group-hover:scale-110'}`} />
           <span className="text-base tracking-wide">{t.myMusic || t.library}</span>
+        </div>
+        <div 
+          className={`group flex items-center gap-4 cursor-pointer transition-all duration-300 px-4 py-3.5 rounded-2xl font-bold ${currentView === 'downloaded' ? 'bg-[var(--accent)] text-[var(--bg-main)] shadow-xl shadow-[var(--accent)]/30 scale-[1.02]' : 'text-[var(--text-secondary)] hover:text-[var(--text-main)] hover:bg-[var(--bg-tertiary)] hover:scale-[1.02]'}`}
+          onClick={() => onNavigate?.('downloaded')}
+        >
+          <HardDrive size={22} className={`transition-transform duration-300 ${currentView === 'downloaded' ? 'scale-110' : 'group-hover:scale-110'}`} />
+          <span className="text-base tracking-wide">Downloaded Songs</span>
         </div>
       </div>
 

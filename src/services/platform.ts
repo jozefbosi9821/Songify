@@ -177,6 +177,13 @@ class PlatformService {
         return { success: false, error: 'Not implemented for this platform' };
     }
 
+    async downloadSoundCloudTrack(trackId: number, title: string, artist: string): Promise<{ success: boolean; path?: string; error?: string }> {
+        if (isElectron()) {
+            return window.electron.downloadSoundCloudTrack(trackId, title, artist);
+        }
+        return { success: false, error: 'Not implemented for this platform' };
+    }
+
     async getSong(filePath: string): Promise<Song> {
         if (isElectron()) {
             return window.electron.getSong(filePath);

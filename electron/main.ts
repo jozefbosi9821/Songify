@@ -870,6 +870,9 @@ ipcMain.handle('window-close', () => {
   });
 }
 
+// Create Downloads directory (higher scope for IPC handlers)
+let downloadsDir: string;
+
 app.whenReady().then(async () => {
   // Register protocol to handle local file requests
   protocol.handle('songify', (request) => {
@@ -951,7 +954,7 @@ app.whenReady().then(async () => {
   });
 
   // Create Downloads directory
-  const downloadsDir = path.join(app.getPath('userData'), 'Downloads');
+  downloadsDir = path.join(app.getPath('userData'), 'Downloads');
   try {
     if (!fs.existsSync(downloadsDir)) {
       fs.mkdirSync(downloadsDir, { recursive: true });
@@ -1108,6 +1111,128 @@ app.whenReady().then(async () => {
     });
   });
 
+  // Download SoundCloud Track Handler
+  ipcMain.handle('download-soundcloud-track', async (_, trackId: number, title: string, artist: string) => {
+    return new Promise(async (resolve) => {
+      try {
+        console.log(`[SoundCloud] Downloading track: ${trackId} (${artist} - ${title})`);
+
+        // First, get the track details from SoundCloud API
+        const token = await getSoundCloudTokenInternal();
+        let clientId = CONFIG.SOUNDCLOUD_CLIENT_ID || FALLBACK_PUBLIC_ID;
+        const headers: Record<string, string> = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Referer': 'https://soundcloud.com/',
+            'Origin': 'https://soundcloud.com'
+        };
+
+        if (token) {
+            headers['Authorization'] = `OAuth ${token}`;
+        }
+
+        let trackUrl = `https://api-v2.soundcloud.com/tracks/${trackId}`;
+        if (!token) {
+            trackUrl += `?client_id=${clientId}`;
+        }
+
+        let trackRes = await fetch(trackUrl, { headers });
+
+        // Retry with scraped client ID if needed
+        if (!trackRes.ok && !token) {
+            console.warn(`[SoundCloud] Track fetch failed, trying scraped client ID`);
+            const scrapedId = await scrapeClientId();
+            if (scrapedId) {
+                clientId = scrapedId;
+                trackUrl = `https://api-v2.soundcloud.com/tracks/${trackId}?client_id=${clientId}`;
+                trackRes = await fetch(trackUrl, { headers });
+            }
+        }
+
+        if (!trackRes.ok) {
+            throw new Error(`Failed to fetch track: ${trackRes.status}`);
+        }
+
+        const trackData = await trackRes.json();
+        console.log(`[SoundCloud] Got track data`);
+
+        // Find the best transcoding (prefer progressive mp3 first for direct download)
+        interface Transcoding {
+            url: string;
+            format: {
+                protocol: string;
+                mime_type: string;
+            };
+        }
+        const transcodings: Transcoding[] = trackData.media?.transcodings || [];
+        let bestTranscoding: Transcoding | null = null;
+
+        // 1. Prefer progressive MP3 first (direct download)
+        bestTranscoding = transcodings.find(
+            (t: Transcoding) => t.format.protocol === 'progressive' && t.format.mime_type.includes('mpeg')
+        ) ?? null;
+
+        if (!bestTranscoding) {
+            // 2. Try HLS MP3
+            bestTranscoding = transcodings.find(
+                (t: Transcoding) => t.format.protocol === 'hls' && t.format.mime_type.includes('mpeg')
+            ) ?? null;
+        }
+
+        if (!bestTranscoding) {
+            throw new Error('No suitable transcoding found for download');
+        }
+
+        // Resolve the actual media URL from the transcoding
+        let mediaUrl = bestTranscoding.url;
+        const separator = mediaUrl.includes('?') ? '&' : '?';
+        mediaUrl += `${separator}client_id=${clientId}`;
+
+        if (trackData.track_authorization) {
+            mediaUrl += `&track_authorization=${trackData.track_authorization}`;
+        }
+
+        const mediaRes = await fetch(mediaUrl, { headers });
+        if (!mediaRes.ok) {
+            throw new Error(`Failed to fetch media URL: ${mediaRes.status}`);
+        }
+
+        const mediaData = await mediaRes.json();
+        const actualStreamUrl = mediaData.url;
+        console.log(`[SoundCloud] Resolved stream URL for download`);
+
+        // Create a safe filename
+        const sanitizeFilename = (name: string) => {
+            return name.replace(/[<>:"/\\|?*]/g, '_');
+        };
+
+        const filename = `${sanitizeFilename(artist)} - ${sanitizeFilename(title)}.mp3`;
+        const filePath = path.join(downloadsDir, filename);
+        console.log(`[SoundCloud] Saving to: ${filePath}`);
+
+        // Now download the actual file
+        const downloadRes = await fetch(actualStreamUrl, { headers });
+        if (!downloadRes.ok) {
+            throw new Error(`Download failed: ${downloadRes.status}`);
+        }
+
+        if (!downloadRes.body) {
+            throw new Error('No response body for download');
+        }
+
+        const fileStream = fs.createWriteStream(filePath);
+        // @ts-ignore
+        await pipeline(Readable.fromWeb(downloadRes.body), fileStream);
+
+        console.log('[SoundCloud] Download complete');
+        resolve({ success: true, path: filePath });
+
+      } catch (error) {
+        console.error('[SoundCloud] Download error:', error);
+        resolve({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+      }
+    });
+  });
+
   // Helper to clean strings
   function cleanString(str: string): string {
     return str
@@ -1160,6 +1285,121 @@ app.whenReady().then(async () => {
         .join('\n');
   }
 
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  const SPICY_LYRICS_API_HOST = 'https://api.spicylyrics.org';
+
+  async function fetchWithRetry(
+    input: string,
+    init: RequestInit = {},
+    options: { attempts?: number; delayMs?: number; stopOnStatuses?: number[]; tag?: string } = {}
+  ): Promise<Response> {
+    const attempts = options.attempts ?? 3;
+    const delayMs = options.delayMs ?? 250;
+    const stopOnStatuses = options.stopOnStatuses ?? [];
+    const tag = options.tag ?? 'fetch';
+
+    let lastError: unknown = null;
+    let lastResponse: Response | null = null;
+
+    for (let i = 0; i < attempts; i++) {
+      try {
+        const response = await fetch(input, init);
+        lastResponse = response;
+
+        if (response.ok || stopOnStatuses.includes(response.status)) {
+          return response;
+        }
+      } catch (error) {
+        lastError = error;
+      }
+
+      if (i < attempts - 1) {
+        await wait(delayMs);
+      }
+    }
+
+    if (lastResponse) return lastResponse;
+    throw new Error(`[Lyrics] ${tag} failed after ${attempts} attempts: ${String(lastError)}`);
+  }
+
+  function extractLyricsFromUnknownPayload(payload: any): string | null {
+    if (!payload) return null;
+    if (typeof payload === 'string') return payload;
+
+    const candidates = [
+      payload.lyrics,
+      payload.syncedLyrics,
+      payload.plainLyrics,
+      payload?.data?.lyrics,
+      payload?.data?.syncedLyrics,
+      payload?.data?.plainLyrics,
+      payload?.result?.lyrics,
+      payload?.result?.syncedLyrics,
+      payload?.result?.plainLyrics,
+      payload?.track?.lyrics,
+      payload?.track?.syncedLyrics,
+      payload?.track?.plainLyrics
+    ];
+
+    for (const candidate of candidates) {
+      if (typeof candidate === 'string' && candidate.trim()) return candidate;
+    }
+
+    if (Array.isArray(payload?.results)) {
+      for (const item of payload.results) {
+        const value = extractLyricsFromUnknownPayload(item);
+        if (value) return value;
+      }
+    }
+
+    return null;
+  }
+
+  // Best-effort adapter for Spicy Lyrics API.
+  // Their public extension relies on api.spicylyrics.org, but endpoint contracts are not officially documented.
+  async function fetchSpicyLyrics(artist: string, title: string): Promise<string | null> {
+    const query = encodeURIComponent(`${artist} ${title}`);
+    const encodedArtist = encodeURIComponent(artist);
+    const encodedTitle = encodeURIComponent(title);
+
+    const candidateUrls = [
+      `${SPICY_LYRICS_API_HOST}/lyrics?artist=${encodedArtist}&title=${encodedTitle}`,
+      `${SPICY_LYRICS_API_HOST}/v1/lyrics?artist=${encodedArtist}&title=${encodedTitle}`,
+      `${SPICY_LYRICS_API_HOST}/search?artist=${encodedArtist}&title=${encodedTitle}`,
+      `${SPICY_LYRICS_API_HOST}/v1/search?artist=${encodedArtist}&title=${encodedTitle}`,
+      `${SPICY_LYRICS_API_HOST}/search?q=${query}`,
+      `${SPICY_LYRICS_API_HOST}/v1/search?q=${query}`
+    ];
+
+    // Quick health check with retries, similar to SpicyLyrics extension bootstrapping behavior.
+    const versionRes = await fetchWithRetry(`${SPICY_LYRICS_API_HOST}/version`, {}, { attempts: 3, delayMs: 250, tag: 'spicy-version' });
+    if (!versionRes.ok) return null;
+
+    for (const url of candidateUrls) {
+      try {
+        const response = await fetchWithRetry(url, {}, { attempts: 3, delayMs: 250, stopOnStatuses: [400, 404], tag: 'spicy-lyrics' });
+        if (!response.ok) continue;
+
+        const contentType = response.headers.get('content-type') || '';
+        let lyrics: string | null = null;
+
+        if (contentType.includes('application/json')) {
+          const data = await response.json();
+          lyrics = extractLyricsFromUnknownPayload(data);
+        } else {
+          const text = await response.text();
+          lyrics = text?.trim() || null;
+        }
+
+        if (lyrics) return cleanLyrics(lyrics);
+      } catch (error) {
+        console.warn('[Lyrics] Spicy Lyrics endpoint failed:', url, error);
+      }
+    }
+
+    return null;
+  }
+
   // Search Lyrics Handler
   async function fetchNeteaseLyrics(artist: string, title: string): Promise<string | null> {
     try {
@@ -1171,7 +1411,7 @@ app.whenReady().then(async () => {
       searchParams.append('limit', '5'); // Increase limit to find better match
       searchParams.append('total', 'true');
   
-      const searchRes = await fetch(searchUrl, {
+      const searchRes = await fetchWithRetry(searchUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -1179,7 +1419,7 @@ app.whenReady().then(async () => {
           'Referer': 'http://music.163.com/'
         },
         body: searchParams
-      });
+      }, { attempts: 3, delayMs: 300, tag: 'netease-search' });
   
       if (!searchRes.ok) return null;
       const searchData = await searchRes.json() as any;
@@ -1210,12 +1450,12 @@ app.whenReady().then(async () => {
       const songId = bestMatch.id;
       
       const lyricUrl = `http://music.163.com/api/song/lyric?id=${songId}&lv=1&kv=1&tv=-1`;
-      const lyricRes = await fetch(lyricUrl, {
+      const lyricRes = await fetchWithRetry(lyricUrl, {
           headers: {
               'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
               'Referer': 'http://music.163.com/'
           }
-      });
+      }, { attempts: 3, delayMs: 300, tag: 'netease-lyrics' });
       
       if (!lyricRes.ok) return null;
       const lyricData = await lyricRes.json() as any;
@@ -1245,13 +1485,26 @@ app.whenReady().then(async () => {
         return lyricsCache[cacheKey];
       }
 
+      // 0. Try Spicy Lyrics API (best-effort adapter)
+      try {
+        console.log('Trying Spicy Lyrics...');
+        const spicyLyrics = await fetchSpicyLyrics(cleanArtist, cleanTitle);
+        if (spicyLyrics) {
+          lyricsCache[cacheKey] = spicyLyrics;
+          saveLyricsCache();
+          return spicyLyrics;
+        }
+      } catch (e) {
+        console.error('Spicy Lyrics error:', e);
+      }
+
       // 1. Try LRCLIB (Best source)
       try {
         console.log('Trying LRCLIB (Get)...');
         // Try strict match first
-        const lrcResponse = await fetch(`https://lrclib.net/api/get?artist_name=${encodeURIComponent(cleanArtist)}&track_name=${encodeURIComponent(cleanTitle)}`, {
+        const lrcResponse = await fetchWithRetry(`https://lrclib.net/api/get?artist_name=${encodeURIComponent(cleanArtist)}&track_name=${encodeURIComponent(cleanTitle)}`, {
           headers: { 'User-Agent': 'Songify v0.0.1' }
-        });
+        }, { attempts: 4, delayMs: 250, stopOnStatuses: [404], tag: 'lrclib-get' });
         
         if (lrcResponse.ok) {
           const lrcData = await lrcResponse.json();
@@ -1267,7 +1520,7 @@ app.whenReady().then(async () => {
              console.log('LRCLIB (Get) not found, trying search...');
              // Try fuzzy search
              const searchUrl = `https://lrclib.net/api/search?q=${encodeURIComponent(cleanArtist + ' ' + cleanTitle)}`;
-             const searchRes = await fetch(searchUrl, { headers: { 'User-Agent': 'Songify v0.0.1' } });
+             const searchRes = await fetchWithRetry(searchUrl, { headers: { 'User-Agent': 'Songify v0.0.1' } }, { attempts: 4, delayMs: 250, tag: 'lrclib-search' });
              if (searchRes.ok) {
                  const searchData = await searchRes.json();
                  // Find best match
@@ -1307,7 +1560,7 @@ app.whenReady().then(async () => {
 
       // 3. Try lyrics.ovh (fallback)
       console.log('Trying lyrics.ovh...');
-      const response = await fetch(`https://api.lyrics.ovh/v1/${encodeURIComponent(cleanArtist)}/${encodeURIComponent(cleanTitle)}`);
+      const response = await fetchWithRetry(`https://api.lyrics.ovh/v1/${encodeURIComponent(cleanArtist)}/${encodeURIComponent(cleanTitle)}`, {}, { attempts: 4, delayMs: 300, tag: 'lyrics-ovh' });
       if (response.ok) {
         const data = await response.json();
         if (data.lyrics) {

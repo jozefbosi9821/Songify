@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Music, Play, Clock, MoreHorizontal, Edit2, ArrowDownAZ, User, ListPlus, PlayCircle, Disc, Search, Heart } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Music, Play, Clock, MoreHorizontal, Edit2, ArrowDownAZ, User, ListPlus, PlayCircle, Disc, Search, Heart, HardDrive, Download } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import type { Song, Playlist } from '../types';
@@ -33,6 +33,8 @@ interface MainContentProps {
   onSortPlaylist?: (playlistId: string, sortBy: 'title' | 'artist' | 'album') => void;
   onToggleLike?: (song: Song) => void;
   isLiked?: (songPath: string) => boolean;
+  onDownloadSoundCloudTrack?: (trackId: number, title: string, artist: string) => void;
+  onDownloadPlaylist?: (songs: Song[]) => void;
 }
 
 export function MainContent({ 
@@ -56,7 +58,9 @@ export function MainContent({
   onSortPlaylist,
   onReorderPlaylist,
   onToggleLike,
-  isLiked
+  isLiked,
+  onDownloadSoundCloudTrack,
+  onDownloadPlaylist
 }: MainContentProps) {
   const { t } = useLanguage();
   const [activeMenuSongPath, setActiveMenuSongPath] = useState<string | null>(null);
@@ -168,6 +172,7 @@ export function MainContent({
                 onAddToPlaylist={onAddToPlaylist}
                 onRemoveFromPlaylist={onRemoveFromPlaylist}
                 onDeleteSong={onDeleteSong}
+                onDownloadSoundCloudTrack={onDownloadSoundCloudTrack}
                 currentPlaylistId={currentPlaylistId}
                 position={{ x: contextMenu.x, y: contextMenu.y }}
             />
@@ -293,6 +298,18 @@ export function MainContent({
                                     <Play size={28} fill="currentColor" className="ml-1" />
                                 </button>
                                 
+                                {onDownloadPlaylist && filteredSongs.some(s => s.isOnline) && (
+                                    <button 
+                                        className="bg-[var(--bg-tertiary)] text-[var(--text-main)] rounded-full p-4 hover:scale-105 active:scale-95 transition-transform shadow-lg flex items-center justify-center hover:bg-[var(--bg-tertiary)]/80"
+                                        onClick={() => {
+                                            onDownloadPlaylist(filteredSongs);
+                                        }}
+                                        title="Download Playlist"
+                                    >
+                                        <Download size={24} />
+                                    </button>
+                                )}
+                                
                                 <div className="flex items-center gap-2 text-sm font-bold text-[var(--text-secondary)]">
                                     <span>{filteredSongs.length} {t.songs}</span>
                                 </div>
@@ -391,9 +408,14 @@ export function MainContent({
                                         <Music size={20} className="text-[var(--text-secondary)]" />
                                     </div>
                                 )}
-                                <div className="min-w-0">
-                                    <div className={`font-bold truncate text-sm ${isCurrentSong ? 'text-[var(--accent)]' : 'text-[var(--text-main)]'}`}>{song.title}</div>
-                                    <div className="text-xs text-[var(--text-secondary)] truncate">{song.artist}</div>
+                                <div className="min-w-0 flex items-center gap-2">
+                                    {!song.isOnline && (
+                                        <HardDrive size={14} className="text-[var(--accent)] opacity-80" />
+                                    )}
+                                    <div className="min-w-0">
+                                        <div className={`font-bold truncate text-sm ${isCurrentSong ? 'text-[var(--accent)]' : 'text-[var(--text-main)]'}`}>{song.title}</div>
+                                        <div className="text-xs text-[var(--text-secondary)] truncate">{song.artist}</div>
+                                    </div>
                                 </div>
                             </div>
                             

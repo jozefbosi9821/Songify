@@ -1,4 +1,4 @@
-import { PlayCircle, ListPlus, User, Trash2, Heart } from 'lucide-react';
+import { PlayCircle, ListPlus, User, Trash2, Heart, Download } from 'lucide-react';
 import type { Song, Playlist } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -12,6 +12,7 @@ interface SongContextMenuProps {
   onAddToPlaylist?: (playlistId: string, path: string) => void;
   onRemoveFromPlaylist?: (playlistId: string, path: string) => void;
   onDeleteSong?: (path: string) => void;
+  onDownloadSoundCloudTrack?: (trackId: number, title: string, artist: string) => void;
   currentPlaylistId?: string | null;
   position?: { x: number, y: number } | null;
 }
@@ -24,8 +25,9 @@ export function SongContextMenu({
   onAddToQueue, 
   onGoToArtist, 
   onAddToPlaylist, 
-  onRemoveFromPlaylist, 
+  onRemoveFromPlaylist,
   onDeleteSong,
+  onDownloadSoundCloudTrack,
   currentPlaylistId,
   position 
 }: SongContextMenuProps) {
@@ -95,6 +97,18 @@ export function SongContextMenu({
                     <User size={14} />
                     <span>{t.goToArtist || "Go to Artist"}</span>
                 </button>
+                {song.soundcloudId && onDownloadSoundCloudTrack && (
+                    <button 
+                        className="w-full text-left px-4 py-2 hover:bg-[var(--bg-tertiary)] text-sm font-medium text-[var(--text-main)] transition-colors flex items-center gap-3"
+                        onClick={() => {
+                            onDownloadSoundCloudTrack(song.soundcloudId!, song.title, song.artist);
+                            onClose();
+                        }}
+                    >
+                        <Download size={14} />
+                        <span>Download Song</span>
+                    </button>
+                )}
             </div>
 
             {currentPlaylistId && (

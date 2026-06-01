@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('electron', {
   loadLibrary: () => ipcRenderer.invoke('load-library'),
   searchOnline: (query: string) => ipcRenderer.invoke('search-online', query),
   downloadSong: (url: string) => ipcRenderer.invoke('download-song', url),
+  downloadSoundCloudTrack: (trackId: number, title: string, artist: string) => ipcRenderer.invoke('download-soundcloud-track', trackId, title, artist),
   getSong: (filePath: string) => ipcRenderer.invoke('get-song', filePath),
   deleteSong: (filePath: string) => ipcRenderer.invoke('delete-song', filePath),
   showInFolder: (filePath: string) => ipcRenderer.invoke('show-in-folder', filePath),

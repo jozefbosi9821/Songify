@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Play, Globe, Heart, Clock, MoreHorizontal } from 'lucide-react';
+import { Search, Play, Globe, Heart, Clock, MoreHorizontal, Download } from 'lucide-react';
 import type { Song, Playlist } from '../types';
 import { soundcloud } from '../services/soundcloud';
 import { SongContextMenu } from './SongContextMenu';
@@ -18,6 +18,7 @@ interface SearchResult {
 interface UnifiedSearchProps {
   onPlayOnline: (song: Song) => void;
   onDownload: (url: string) => Promise<{ success: boolean; path?: string; error?: string }>;
+  onDownloadSoundCloudTrack?: (trackId: number, title: string, artist: string) => Promise<{ success: boolean; path?: string; error?: string }>;
   onToggleLike?: (song: Song) => void;
   isLiked?: (songPath: string) => boolean;
   playlists: Playlist[];
@@ -31,6 +32,7 @@ interface UnifiedSearchProps {
 export function UnifiedSearch({ 
     onPlayOnline, 
     // onDownload, 
+    onDownloadSoundCloudTrack,
     onToggleLike, 
     isLiked,
     playlists,
@@ -173,6 +175,18 @@ export function UnifiedSearch({
                     </div>
                     
                     <div className="flex justify-end items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {result.soundcloudId && onDownloadSoundCloudTrack && (
+                        <button
+                          className="p-2 hover:bg-[var(--bg-main)] rounded-lg transition-colors text-[var(--text-secondary)] hover:text-[var(--text-main)]"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDownloadSoundCloudTrack(result.soundcloudId!, result.title, result.artist);
+                          }}
+                          title="Download Song"
+                        >
+                          <Download size={16} />
+                        </button>
+                      )}
                       <button 
                         className={`p-2 rounded-lg transition-colors ${isLiked?.(result.soundcloudId ? `soundcloud://${result.soundcloudId}` : result.url) ? 'text-[var(--accent)] opacity-100' : 'text-[var(--text-secondary)] hover:text-[var(--text-main)] hover:bg-[var(--bg-main)]'}`}
                         onClick={(e) => {
@@ -238,6 +252,7 @@ export function UnifiedSearch({
                 // Cannot delete online song from search result
                 setContextMenu(null);
             }}
+            onDownloadSoundCloudTrack={onDownloadSoundCloudTrack}
         />
       )}
     </div>

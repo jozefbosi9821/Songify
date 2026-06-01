@@ -33,7 +33,7 @@ function App() {
 
 function AppContent() {
   const { t } = useLanguage();
-  const [currentView, setCurrentView] = useState<'home' | 'search' | 'settings' | 'playlist' | 'library' | 'artist' | 'profile'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'search' | 'settings' | 'playlist' | 'library' | 'artist' | 'profile' | 'downloaded'>('home');
   const [currentPlaylistId, setCurrentPlaylistId] = useState<string | null>(null);
   const [selectedArtist, setSelectedArtist] = useState<string | null>(null);
   const [songs, setSongs] = useState<Song[]>([]);
@@ -1045,7 +1045,7 @@ function AppContent() {
       }));
   };
 
-  const handleNavigate = (view: 'home' | 'search' | 'settings' | 'playlist' | 'library' | 'artist' | 'profile', playlistId?: string) => {
+  const handleNavigate = (view: 'home' | 'search' | 'settings' | 'playlist' | 'library' | 'artist' | 'profile' | 'downloaded', playlistId?: string) => {
     setCurrentView(view);
     if (view === 'playlist' && playlistId) {
       setCurrentPlaylistId(playlistId);
@@ -1078,6 +1078,35 @@ function AppContent() {
       }
     }
     return result;
+  };
+
+  const handleDownloadSoundCloudTrack = async (trackId: number, title: string, artist: string) => {
+    const result = await platform.downloadSoundCloudTrack(trackId, title, artist);
+    if (result.success && result.path) {
+      try {
+        const newSong = await platform.getSong(result.path);
+        
+        setSongs(prev => {
+          if (prev.some(s => s.path === newSong.path)) return prev;
+          return [...prev, newSong];
+        });
+        
+        if (queue.length === 0) {
+           setQueue([newSong.path]);
+        }
+      } catch (error) {
+        console.error("Error adding downloaded SoundCloud track to library:", error);
+      }
+    }
+    return result;
+  };
+
+  const handleDownloadPlaylist = async (playlistSongs: Song[]) => {
+    const downloadPromises = playlistSongs
+      .filter(song => song.soundcloudId)
+      .map(song => handleDownloadSoundCloudTrack(song.soundcloudId!, song.title, song.artist));
+    
+    await Promise.all(downloadPromises);
   };
 
   const handleAddToPlaylist = (playlistId: string, songOrPath: string | Song) => {
@@ -1222,6 +1251,10 @@ function AppContent() {
       }
       return [];
     }
+
+    if (currentView === 'downloaded') {
+      return songs.filter(s => !s.isOnline);
+    }
     
     // User Request: "Make it so my music is basically all songs in Playlists combined"
     // If there are playlists, filter "My Music" to only show songs that are in at least one playlist.
@@ -1247,6 +1280,13 @@ function AppContent() {
           color: 'from-purple-700 to-pink-600'
         };
       }
+    }
+    if (currentView === 'downloaded') {
+      return {
+        title: 'Downloaded Songs',
+        subtitle: 'Your offline library',
+        color: 'from-indigo-700 to-purple-600'
+      };
     }
     return {
       title: t.myMusic,
@@ -1326,6 +1366,7 @@ function AppContent() {
           <UnifiedSearch 
             onPlayOnline={handlePlayOnline}
             onDownload={handleDownloadSong}
+            onDownloadSoundCloudTrack={handleDownloadSoundCloudTrack}
             onToggleLike={toggleLike}
             isLiked={isLiked}
             playlists={playlists}
@@ -1392,6 +1433,8 @@ function AppContent() {
             onSortPlaylist={handleSortPlaylist}
             onToggleLike={toggleLike}
             isLiked={isLiked}
+            onDownloadSoundCloudTrack={handleDownloadSoundCloudTrack}
+            onDownloadPlaylist={handleDownloadPlaylist}
           />
         )}
         </div>
