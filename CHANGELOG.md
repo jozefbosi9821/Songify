@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.3.5] - 2026-7-1
+
+### Changed
+- **Backend**: Moved Songify Servers to another region.
+
 ## [1.3.4] - 2026-03-26
 
 ### Fixed

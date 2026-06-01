@@ -77,7 +77,7 @@ Write-Host ""
 Write-Host "Syncing backend changelog via VPS API..."
 
 # Must match your VPS backend and admin auth.
-$backendUrl = "http://212.227.64.179:12268"
+$backendUrl = "http://93.115.101.103:12268"
 $adminPassword = $env:BACKEND_ADMIN_PASSWORD
 
 if ([string]::IsNullOrWhiteSpace($adminPassword)) {
