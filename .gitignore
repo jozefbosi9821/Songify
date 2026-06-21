@@ -1,4 +1,28 @@
-# Logs
+# Source Code (Closed Source)
+/backend
+/electron
+/src
+/public
+/dist
+/dist-electron
+/release
+/node_modules
+
+# Config Files
+src/config.ts
+.env
+.env.local
+.env.*.local
+
+# Build/Release Scripts
+release.ps1
+vite.config.ts
+tsconfig*.json
+eslint.config.js
+postcss.config.js
+tailwind.config.js
+
+# Logs & Dependencies
 logs
 *.log
 npm-debug.log*
@@ -6,13 +30,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+package-lock.json
+yarn.lock
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
+# Editor & System
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -22,12 +43,23 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.github/workflows
 
-# Electron
-release
-dist-electron
-*.exe
-
-# Backend
+# Backend (Server Code)
 backend/
+!backend/package.json
 
+# Electron Main Process
+electron/
+
+# Config with secrets
+src/config.ts
+
+# Release scripts
+release.ps1
+
+# Database files
+*.db
+*.sqlite
+.env
+.env.local
