@@ -1,102 +1,161 @@
-# Release Script
+# Songify Release Script (Closed Source)
+# Builds app, creates version tag, and uploads .exe to GitHub Releases
 
-# ─────────────────────────────────────────
-# 0. Choose release mode
-# ─────────────────────────────────────────
 Write-Host ""
-Write-Host "╔════════════════════════════════════╗"
-Write-Host "║         Songify Release Tool        ║"
-Write-Host "╠════════════════════════════════════╣"
-Write-Host "║  [1] Full Release (Git + Webhook)   ║"
-Write-Host "║  [2] Git Only                       ║"
-Write-Host "║  [3] Webhook Only                   ║"
-Write-Host "╚════════════════════════════════════╝"
+Write-Host "╔════════════════════════════════════════╗"
+Write-Host "║      Songify Release Tool (v2)         ║"
+Write-Host "║    Closed Source Release Only          ║"
+Write-Host "╚════════════════════════════════════════╝"
 Write-Host ""
 
-$mode = Read-Host "Choose mode (1/2/3) [Default: 1]"
-if ([string]::IsNullOrWhiteSpace($mode)) { $mode = "1" }
+# ─────────────────────────────────────────
+# 1. Get current version
+# ─────────────────────────────────────────
+$packageJson = Get-Content "package.json" | ConvertFrom-Json
+$currentVersion = $packageJson.version
+Write-Host "Current version: $currentVersion"
 
-if ($mode -notin @("1", "2", "3")) {
-    Write-Error "Invalid option. Please run the script again and choose 1, 2, or 3."
+# ─────────────────────────────────────────
+# 2. Ask for new version
+# ─────────────────────────────────────────
+$newVersion = Read-Host "Enter new version (e.g., 1.3.6) or type (patch/minor/major) [Default: patch]"
+if ([string]::IsNullOrWhiteSpace($newVersion)) {
+    $newVersion = "patch"
+}
+
+Write-Host "Bumping to version: $newVersion..."
+
+# ─────────────────────────────────────────
+# 3. Build the app
+# ─────────────────────────────────────────
+Write-Host ""
+Write-Host "Building Songify..."
+npm run build
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Build failed!"
     exit 1
 }
 
-$doGit     = $mode -eq "1" -or $mode -eq "2"
-$doWebhook = $mode -eq "1" -or $mode -eq "3"
+Write-Host "✓ Build successful"
 
 # ─────────────────────────────────────────
-# GIT STEPS
-# ─────────────────────────────────────────
-if ($doGit) {
-
-    # 1. Pull latest changes
-    Write-Host ""
-    Write-Host "Pulling latest changes..."
-    git pull origin main
-
-    # 2. Check for uncommitted changes and commit them
-    $changes = git status --porcelain
-    if ($changes) {
-        Write-Host "Uncommitted changes detected. Committing..."
-        git add .
-        git commit -m "chore: prepare for release"
-    }
-
-    # 3. Get current version
-    $packageJson = Get-Content "package.json" | ConvertFrom-Json
-    $currentVersion = $packageJson.version
-    Write-Host "Current version: $currentVersion"
-
-    # 4. Ask for new version
-    $newVersion = Read-Host "Enter new version (e.g., 1.2.0) or increment type (patch, minor, major) [Default: patch]"
-    if ([string]::IsNullOrWhiteSpace($newVersion)) {
-        $newVersion = "patch"
-    }
-
-    # 5. Bump version
-    Write-Host "Bumping version to $newVersion..."
-    try {
-        npm version $newVersion
-    } catch {
-        Write-Error "Failed to update version. Please check your input."
-        exit 1
-    }
-
-    # 6. Push to GitHub
-    Write-Host "Pushing to GitHub..."
-    git push origin main
-    git push origin --tags
-
-    Write-Host "Git steps complete!"
-}
-
-# ─────────────────────────────────────────
-# BACKEND VPS CHANGELOG SYNC (API)
+# 4. Create electron installer (.exe)
 # ─────────────────────────────────────────
 Write-Host ""
-Write-Host "Syncing backend changelog via VPS API..."
+Write-Host "Creating installer..."
+npm run dist
 
-# Must match your VPS backend and admin auth.
-$backendUrl = "http://93.115.101.103:12268"
-$adminPassword = $env:BACKEND_ADMIN_PASSWORD
-
-if ([string]::IsNullOrWhiteSpace($adminPassword)) {
-    $adminPassword = Read-Host "Enter backend dashboard admin password (BACKEND_ADMIN_PASSWORD not set)"
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Installer creation failed!"
+    exit 1
 }
 
-try {
-    $rootChangelog = Get-Content "CHANGELOG.md" -Raw
+Write-Host "✓ Installer created"
 
-    # 1) Auth (dashboard token)
-    $authPayload = @{ password = $adminPassword } | ConvertTo-Json -Depth 5
-    $authResp = Invoke-RestMethod -Uri "$backendUrl/dashboard/api/auth" -Method Post -Body $authPayload -ContentType "application/json"
-    $token = $authResp.token
+# ─────────────────────────────────────────
+# 5. Bump version in package.json
+# ─────────────────────────────────────────
+Write-Host ""
+Write-Host "Bumping version..."
+npm version $newVersion
 
-    if ([string]::IsNullOrWhiteSpace($token)) { throw "No token returned from dashboard auth." }
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Version bump failed!"
+    exit 1
+}
 
-    # 2) Push changelog to VPS
-    $syncPayload = @{ content = $rootChangelog } | ConvertTo-Json -Depth 5
-    Invoke-RestMethod -Uri "$backendUrl/dashboard/api/changelog" -Method Post -Headers @{ Authorization = "Bearer $token" } -Body $syncPayload -ContentType "application/json" | Out-Null
+# Get the new version
+$packageJson = Get-Content "package.json" | ConvertFrom-Json
+$finalVersion = $packageJson.version
+Write-Host "✓ Version bumped to $finalVersion"
+
+# ─────────────────────────────────────────
+# 6. Commit and tag
+# ─────────────────────────────────────────
+Write-Host ""
+Write-Host "Committing to git..."
+git add package.json package-lock.json
+git commit -m "chore: release v$finalVersion"
+git tag -a "v$finalVersion" -m "Release v$finalVersion"
+
+# ─────────────────────────────────────────
+# 7. Push to GitHub
+# ─────────────────────────────────────────
+Write-Host ""
+Write-Host "Pushing to GitHub..."
+git push origin main
+git push origin --tags
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Git push failed!"
+    exit 1
+}
+
+Write-Host "✓ Pushed to GitHub"
+
+# ─────────────────────────────────────────
+# 8. Find and upload .exe to GitHub Releases
+# ─────────────────────────────────────────
+Write-Host ""
+Write-Host "Uploading installer to GitHub Releases..."
+
+$exePath = Get-ChildItem -Path "release" -Filter "*.exe" -Recurse | Select-Object -First 1
+if (-not $exePath) {
+    Write-Error "No .exe file found in release/ folder!"
+    exit 1
+}
+
+$exeFullPath = $exePath.FullName
+$exeName = $exePath.Name
+
+Write-Host "Found installer: $exeName"
+
+# Create GitHub release with the .exe
+$repoUrl = "https://api.github.com/repos/jozefbosi9821/Songify"
+$ghToken = $env:GITHUB_TOKEN
+
+if ([string]::IsNullOrWhiteSpace($ghToken)) {
+    Write-Host ""
+    Write-Host "⚠️  GITHUB_TOKEN not set. Manual upload required:"
+    Write-Host "   1. Go to: https://github.com/jozefbosi9821/Songify/releases/new"
+    Write-Host "   2. Select tag: v$finalVersion"
+    Write-Host "   3. Upload this file: $exeFullPath"
+    Write-Host ""
+} else {
+    # Create release
+    $releaseBody = @{
+        tag_name    = "v$finalVersion"
+        name        = "Songify v$finalVersion"
+        body        = "Release of Songify v$finalVersion. Download the installer below.`n`nFor changelog, see [CHANGELOG.md](https://github.com/jozefbosi9821/Songify/blob/main/CHANGELOG.md)"
+        draft       = $false
+        prerelease  = $false
+    } | ConvertTo-Json
+
+    Write-Host "Creating GitHub release..."
+    $releaseResp = Invoke-RestMethod -Uri "$repoUrl/releases" -Method Post `
+        -Headers @{ Authorization = "Bearer $ghToken"; "X-GitHub-Api-Version" = "2022-11-28" } `
+        -Body $releaseBody -ContentType "application/json"
+
+    $uploadUrl = $releaseResp.upload_url -replace '\{.*?\}', ''
+
+    # Upload .exe
+    Write-Host "Uploading $exeName..."
+    $fileBytes = [System.IO.File]::ReadAllBytes($exeFullPath)
+    
+    Invoke-RestMethod -Uri "$uploadUrl`?name=$exeName" -Method Post `
+        -Headers @{ Authorization = "Bearer $ghToken"; "X-GitHub-Api-Version" = "2022-11-28" } `
+        -ContentType "application/octet-stream" `
+        -Body $fileBytes | Out-Null
+
+    Write-Host "✓ Release created and installer uploaded!"
+}
+
+Write-Host ""
+Write-Host "╔════════════════════════════════════════╗"
+Write-Host "║         Release Complete! ✓            ║"
+Write-Host "╚════════════════════════════════════════╝"
+Write-Host ""
 
     Write-Host "Backend changelog synced successfully!"
 } catch {
