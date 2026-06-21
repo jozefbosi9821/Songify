@@ -34,11 +34,15 @@
     "win": {
       "target": "nsis"
     },
+    "nsis": {
+      "artifactName": "Songify-Setup-${version}.${ext}"
+    },
     "publish": [
       {
         "provider": "github",
         "owner": "jozefbosi9821",
-        "repo": "Songify"
+        "repo": "Songify",
+        "releaseAssets": ["*.exe"]
       }
     ]
   },
